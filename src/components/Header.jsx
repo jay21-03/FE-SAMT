@@ -1,0 +1,46 @@
+import { useNavigate } from "react-router-dom";
+
+export default function Header() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("role");
+    navigate("/login");
+  };
+
+  const role = localStorage.getItem("role");
+
+  return (
+    <header className="app-header">
+      <div className="app-header-left">
+        <div className="app-title">
+          <span className="app-title-prefix">Academic Management Tool</span>
+          <span className="app-title-main">SAMT</span>
+        </div>
+      </div>
+
+      <div className="app-header-right">
+        <div className="app-header-role">
+          <span className="role-label">{role}</span>
+        </div>
+
+        <button className="icon-button" aria-label="Search">
+          🔍
+        </button>
+        <button className="icon-button" aria-label="Notifications">
+          🔔
+        </button>
+
+        <button className="avatar-button" aria-label="Profile">
+          <span className="avatar-circle">U</span>
+        </button>
+
+        <button className="logout-button" onClick={handleLogout}>
+          Đăng xuất
+        </button>
+      </div>
+    </header>
+  );
+}
