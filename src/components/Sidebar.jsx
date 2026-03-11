@@ -65,6 +65,9 @@ export default function Sidebar() {
             <Link className="sidebar-link" to="/app/student/stats">
               <span>My Stats</span>
             </Link>
+            <Link className="sidebar-link" to="/app/student/permissions">
+              <span>Permissions</span>
+            </Link>
           </div>
         </nav>
       )}

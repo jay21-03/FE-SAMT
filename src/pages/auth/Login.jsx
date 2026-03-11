@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginApi, getMeApi } from "../api/auth.api.ts";
+import { loginApi, getMeApi } from "../../api/auth.api.ts";
 
 const MOCK_USERS = [
   { email: "admin@samt.com", password: "123456", role: "ADMIN" },
   { email: "lecturer@samt.com", password: "123456", role: "LECTURER" },
-  { email: "student@samt.com", password: "123456", role: "STUDENT" },
+  { email: "student@samt.com", password: "123456", role: "STUDENT", groupRole: "MEMBER" },
+  { email: "leader@samt.com", password: "123456", role: "STUDENT", groupRole: "LEADER" },
 ];
 
 export default function Login() {
@@ -36,6 +37,12 @@ export default function Login() {
         localStorage.setItem("access_token", "mock-token");
         localStorage.setItem("refresh_token", "mock-refresh-token");
         role = user.role;
+        // gán group_role mock để test Leader/Member
+        if (user.groupRole) {
+          localStorage.setItem("group_role", user.groupRole);
+        } else {
+          localStorage.removeItem("group_role");
+        }
       } else {
         const res = await loginApi({ email, password });
         const { accessToken, refreshToken } = res.data;
@@ -44,6 +51,12 @@ export default function Login() {
 
         const meRes = await getMeApi();
         role = meRes.data.role;
+        // nếu backend trả về groupRole có thể set ở đây
+        if (meRes.data.groupRole) {
+          localStorage.setItem("group_role", meRes.data.groupRole);
+        } else {
+          localStorage.removeItem("group_role");
+        }
       }
 
       localStorage.setItem("role", role);
@@ -112,7 +125,8 @@ export default function Login() {
               <div className="auth-test-accounts">
                 <div>admin@samt.com / 123456 (ADMIN)</div>
                 <div>lecturer@samt.com / 123456 (LECTURER)</div>
-                <div>student@samt.com / 123456 (STUDENT)</div>
+                <div>student@samt.com / 123456 (STUDENT - MEMBER)</div>
+                <div>leader@samt.com / 123456 (STUDENT - LEADER)</div>
               </div>
             )}
           </div>
@@ -156,3 +170,4 @@ export default function Login() {
     </div>
   );
 }
+

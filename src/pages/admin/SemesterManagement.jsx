@@ -1,5 +1,5 @@
-import DashboardLayout from "../layout/DashboardLayout";
-import DataTable from "../components/DataTable";
+import DashboardLayout from "../../layout/DashboardLayout";
+import DataTable from "../../components/DataTable";
 
 export default function SemesterManagement() {
   const columns = [

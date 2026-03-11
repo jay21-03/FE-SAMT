@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import DashboardLayout from "../layout/DashboardLayout";
+import DashboardLayout from "../../layout/DashboardLayout";
 
 export default function StudentStats() {
   const stats = {

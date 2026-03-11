@@ -1,5 +1,5 @@
-import DashboardLayout from "../layout/DashboardLayout";
-import DebouncedSearchInput from "../components/DebouncedSearchInput";
+import DashboardLayout from "../../layout/DashboardLayout";
+import DebouncedSearchInput from "../../components/DebouncedSearchInput";
 
 export default function GroupDetails() {
   return (
@@ -39,7 +39,9 @@ export default function GroupDetails() {
             </div>
             <div className="profile-form">
               <button className="primary-button">Open Project Config</button>
-              <button className="primary-button secondary">View GitHub Repo</button>
+              <button className="primary-button secondary">
+                View GitHub Repo
+              </button>
             </div>
           </div>
         </div>

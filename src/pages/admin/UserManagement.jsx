@@ -1,6 +1,6 @@
 import { useState } from "react";
-import DashboardLayout from "../layout/DashboardLayout";
-import DataTable from "../components/DataTable";
+import DashboardLayout from "../../layout/DashboardLayout";
+import DataTable from "../../components/DataTable";
 
 export default function UserManagement() {
   const [loading] = useState(false);

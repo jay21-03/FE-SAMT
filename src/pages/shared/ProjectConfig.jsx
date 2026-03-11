@@ -1,4 +1,4 @@
-import DashboardLayout from "../layout/DashboardLayout";
+import DashboardLayout from "../../layout/DashboardLayout";
 
 export default function ProjectConfig() {
   return (
@@ -21,7 +21,10 @@ export default function ProjectConfig() {
             <div className="profile-form">
               <label>
                 <span>Jira Host URL</span>
-                <input type="text" placeholder="https://your-domain.atlassian.net" />
+                <input
+                  type="text"
+                  placeholder="https://your-domain.atlassian.net"
+                />
               </label>
               <label>
                 <span>Jira API Token</span>
@@ -59,7 +62,9 @@ export default function ProjectConfig() {
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button className="primary-button">Save Config</button>
-                <button className="primary-button secondary">Verify Connection</button>
+                <button className="primary-button secondary">
+                  Verify Connection
+                </button>
               </div>
             </div>
           </div>
