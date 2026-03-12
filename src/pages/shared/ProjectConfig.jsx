@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import DashboardLayout from "../layout/DashboardLayout";
+import DashboardLayout from "../../layout/DashboardLayout";
 import {
   useCreateProjectConfig,
   useProjectConfigByGroup,
   useUpdateProjectConfig,
   useVerifyProjectConfig,
-} from "../hooks/useProjectConfigs";
+} from "../../hooks/useProjectConfigs";
 
 export default function ProjectConfig() {
   const { groupId } = useParams();

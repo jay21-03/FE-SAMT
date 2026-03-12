@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import DashboardLayout from "../layout/DashboardLayout";
-import DataTable from "../components/DataTable";
-import DebouncedSearchInput from "../components/DebouncedSearchInput";
-import { useUsers } from "../hooks/useUserGroups";
+import DashboardLayout from "../../layout/DashboardLayout";
+import DataTable from "../../components/DataTable";
+import DebouncedSearchInput from "../../components/DebouncedSearchInput";
+import { useUsers } from "../../hooks/useUserGroups";
 
 export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState("ALL");

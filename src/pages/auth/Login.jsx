@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authApi } from "../api/authApi";
-import { tokenStore } from "../api/tokenStore";
+import { authApi } from "../../api/authApi";
+import { tokenStore } from "../../api/tokenStore";
 
 const MOCK_USERS = [
   { email: "admin@samt.com", password: "123456", role: "ADMIN" },
   { email: "lecturer@samt.com", password: "123456", role: "LECTURER" },
-  { email: "student@samt.com", password: "123456", role: "STUDENT" },
+  { email: "student@samt.com", password: "123456", role: "STUDENT", groupRole: "MEMBER" },
+  { email: "leader@samt.com", password: "123456", role: "STUDENT", groupRole: "LEADER" },
 ];
 
 export default function Login() {
@@ -39,9 +40,16 @@ export default function Login() {
           refreshToken: "mock-refresh-token",
         });
         role = user.role;
+        // gán group_role mock để test Leader/Member
+        if (user.groupRole) {
+          localStorage.setItem("group_role", user.groupRole);
+        } else {
+          localStorage.removeItem("group_role");
+        }
       } else {
         await authApi.login({ email, password });
         role = "STUDENT";
+        localStorage.removeItem("group_role");
       }
 
       localStorage.setItem("role", role);
@@ -110,7 +118,8 @@ export default function Login() {
               <div className="auth-test-accounts">
                 <div>admin@samt.com / 123456 (ADMIN)</div>
                 <div>lecturer@samt.com / 123456 (LECTURER)</div>
-                <div>student@samt.com / 123456 (STUDENT)</div>
+                <div>student@samt.com / 123456 (STUDENT - MEMBER)</div>
+                <div>leader@samt.com / 123456 (STUDENT - LEADER)</div>
               </div>
             )}
           </div>
@@ -154,3 +163,4 @@ export default function Login() {
     </div>
   );
 }
+

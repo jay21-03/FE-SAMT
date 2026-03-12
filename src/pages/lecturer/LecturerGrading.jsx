@@ -1,10 +1,20 @@
 import { Link } from "react-router-dom";
-import DashboardLayout from "../layout/DashboardLayout";
+import DashboardLayout from "../../layout/DashboardLayout";
 
 export default function LecturerGrading() {
   const grades = [
-    { student: "Nguyễn Văn A", group: "Team Alpha", score: 8.5, status: "Draft" },
-    { student: "Trần Thị B", group: "Team Alpha", score: 9.0, status: "Published" },
+    {
+      student: "Nguyễn Văn A",
+      group: "Team Alpha",
+      score: 8.5,
+      status: "Draft",
+    },
+    {
+      student: "Trần Thị B",
+      group: "Team Alpha",
+      score: 9.0,
+      status: "Published",
+    },
     { student: "Lê Văn C", group: "Team Beta", score: 7.8, status: "Draft" },
   ];
 

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import DashboardLayout from "../layout/DashboardLayout";
-import DataTable from "../components/DataTable";
-import { useSecurityEvents } from "../hooks/useIdentityAdmin";
+import DashboardLayout from "../../layout/DashboardLayout";
+import DataTable from "../../components/DataTable";
+import { useSecurityEvents } from "../../hooks/useIdentityAdmin";
 
 export default function AuditLogs() {
   const { data, isLoading } = useSecurityEvents({ page: 0, size: 20 });

@@ -1,21 +1,23 @@
+import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Login from "../pages/Login";
-import Register from "../pages/Register";
-import AdminDashboard from "../pages/AdminDashboard";
-import LecturerDashboard from "../pages/LecturerDashboard";
-import LecturerTasks from "../pages/LecturerTasks";
-import LecturerGithubStats from "../pages/LecturerGithubStats";
-import LecturerGrading from "../pages/LecturerGrading";
-import StudentDashboard from "../pages/StudentDashboard";
-import StudentStats from "../pages/StudentStats";
-import UserProfile from "../pages/UserProfile";
-import UserManagement from "../pages/UserManagement";
-import SemesterManagement from "../pages/SemesterManagement";
-import AuditLogs from "../pages/AuditLogs";
-import GroupList from "../pages/GroupList";
-import GroupDetails from "../pages/GroupDetails";
-import ProjectConfig from "../pages/ProjectConfig";
-import SystemConfig from "../pages/SystemConfig";
+import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
+import AdminDashboard from "../pages/admin/AdminDashboard";
+import UserManagement from "../pages/admin/UserManagement";
+import SemesterManagement from "../pages/admin/SemesterManagement";
+import AuditLogs from "../pages/admin/AuditLogs";
+import SystemConfig from "../pages/admin/SystemConfig";
+import LecturerDashboard from "../pages/lecturer/LecturerDashboard";
+import LecturerTasks from "../pages/lecturer/LecturerTasks";
+import LecturerGithubStats from "../pages/lecturer/LecturerGithubStats";
+import LecturerGrading from "../pages/lecturer/LecturerGrading";
+import StudentDashboard from "../pages/student/StudentDashboard";
+import StudentStats from "../pages/student/StudentStats";
+import StudentPermissions from "../pages/student/StudentPermissions";
+import UserProfile from "../pages/shared/UserProfile";
+import GroupList from "../pages/shared/GroupList";
+import GroupDetails from "../pages/shared/GroupDetails";
+import ProjectConfig from "../pages/shared/ProjectConfig";
 import ProtectedRoute from "./ProtectedRoute";
 
 export default function AppRouter() {
@@ -85,6 +87,15 @@ export default function AppRouter() {
         element={
           <ProtectedRoute allowedRoles={["STUDENT"]}>
             <StudentStats />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/app/student/permissions"
+        element={
+          <ProtectedRoute allowedRoles={["STUDENT"]}>
+            <StudentPermissions />
           </ProtectedRoute>
         }
       />

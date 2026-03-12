@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import DashboardLayout from "../layout/DashboardLayout";
-import DataTable from "../components/DataTable";
-import DebouncedSearchInput from "../components/DebouncedSearchInput";
-import { useGroups } from "../hooks/useUserGroups";
+import DashboardLayout from "../../layout/DashboardLayout";
+import DataTable from "../../components/DataTable";
+import DebouncedSearchInput from "../../components/DebouncedSearchInput";
+import { useGroups } from "../../hooks/useUserGroups";
 
 export default function GroupList() {
   const [search, setSearch] = useState("");

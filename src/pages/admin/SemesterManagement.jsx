@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import DashboardLayout from "../layout/DashboardLayout";
-import DataTable from "../components/DataTable";
-import { useSemesters } from "../hooks/useUserGroups";
+import DashboardLayout from "../../layout/DashboardLayout";
+import DataTable from "../../components/DataTable";
+import { useSemesters } from "../../hooks/useUserGroups";
 
 export default function SemesterManagement() {
   const { data, isLoading } = useSemesters();

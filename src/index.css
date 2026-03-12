@@ -15,7 +15,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top left, #1d4ed8 0, #0b1120 45%, #020617 100%);
+  background-image: url("./assets/ChatGPT Image 21_12_25 11 thg 3, 2026.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   padding: 32px 16px;
 }
 

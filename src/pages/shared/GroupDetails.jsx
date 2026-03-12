@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import DashboardLayout from "../layout/DashboardLayout";
-import DebouncedSearchInput from "../components/DebouncedSearchInput";
-import { useGroup, useGroupMembers } from "../hooks/useUserGroups";
+import DashboardLayout from "../../layout/DashboardLayout";
+import DebouncedSearchInput from "../../components/DebouncedSearchInput";
+import { useGroup, useGroupMembers } from "../../hooks/useUserGroups";
 
 export default function GroupDetails() {
   const { groupId } = useParams();

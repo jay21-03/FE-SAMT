@@ -1,11 +1,26 @@
 import { Link } from "react-router-dom";
-import DashboardLayout from "../layout/DashboardLayout";
+import DashboardLayout from "../../layout/DashboardLayout";
 
 export default function LecturerTasks() {
   const tasks = [
-    { name: "API Integration", group: "Team Alpha", status: "In Progress", due: "21 Jan" },
-    { name: "Define Grading Rubric", group: "Team Beta", status: "To Do", due: "22 Jan" },
-    { name: "Review Final Report", group: "Team Gamma", status: "Completed", due: "18 Jan" },
+    {
+      name: "API Integration",
+      group: "Team Alpha",
+      status: "In Progress",
+      due: "21 Jan",
+    },
+    {
+      name: "Define Grading Rubric",
+      group: "Team Beta",
+      status: "To Do",
+      due: "22 Jan",
+    },
+    {
+      name: "Review Final Report",
+      group: "Team Gamma",
+      status: "Completed",
+      due: "18 Jan",
+    },
   ];
 
   return (

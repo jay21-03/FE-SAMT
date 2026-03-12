@@ -1,6 +1,6 @@
 import { useState } from "react";
-import DashboardLayout from "../layout/DashboardLayout";
-import StatCard from "../components/StatCard";
+import DashboardLayout from "../../layout/DashboardLayout";
+import StatCard from "../../components/StatCard";
 
 const STATUS_OPTIONS = ["Active", "Invited", "Pending"];
 
@@ -142,3 +142,4 @@ export default function AdminDashboard() {
     </DashboardLayout>
   );
 }
+
