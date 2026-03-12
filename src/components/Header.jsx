@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
+import { tokenStore } from "../api/tokenStore";
 
 export default function Header() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    tokenStore.clear();
     localStorage.removeItem("role");
     navigate("/login");
   };

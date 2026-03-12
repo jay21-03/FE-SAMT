@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { registerApi } from "../api/auth.api.ts";
+import { authApi } from "../api/authApi";
 
 export default function Register() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,9 +40,11 @@ export default function Register() {
 
     try {
       setLoading(true);
-      await registerApi({
+      await authApi.register({
         email,
         password,
+        confirmPassword,
+        fullName,
         role: "STUDENT",
       });
       navigate("/login");
@@ -79,6 +82,17 @@ export default function Register() {
           </p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
+            <label className="auth-field">
+              <span>Full Name</span>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                placeholder="Nguyen Van A"
+              />
+            </label>
+
             <label className="auth-field">
               <span>Email</span>
               <input

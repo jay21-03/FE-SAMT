@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginApi, getMeApi } from "../api/auth.api.ts";
+import { authApi } from "../api/authApi";
+import { tokenStore } from "../api/tokenStore";
 
 const MOCK_USERS = [
   { email: "admin@samt.com", password: "123456", role: "ADMIN" },
@@ -33,17 +34,14 @@ export default function Login() {
           setLoading(false);
           return;
         }
-        localStorage.setItem("access_token", "mock-token");
-        localStorage.setItem("refresh_token", "mock-refresh-token");
+        tokenStore.setTokens({
+          accessToken: "mock-token",
+          refreshToken: "mock-refresh-token",
+        });
         role = user.role;
       } else {
-        const res = await loginApi({ email, password });
-        const { accessToken, refreshToken } = res.data;
-        localStorage.setItem("access_token", accessToken);
-        localStorage.setItem("refresh_token", refreshToken);
-
-        const meRes = await getMeApi();
-        role = meRes.data.role;
+        await authApi.login({ email, password });
+        role = "STUDENT";
       }
 
       localStorage.setItem("role", role);

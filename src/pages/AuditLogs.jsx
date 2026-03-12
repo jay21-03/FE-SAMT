@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import DashboardLayout from "../layout/DashboardLayout";
 import DataTable from "../components/DataTable";
+import { useSecurityEvents } from "../hooks/useIdentityAdmin";
 
 export default function AuditLogs() {
+  const { data, isLoading } = useSecurityEvents({ page: 0, size: 20 });
   const columns = [
     { key: "time", header: "Time" },
     { key: "actor", header: "Actor" },
@@ -10,7 +13,17 @@ export default function AuditLogs() {
     { key: "detail", header: "Detail" },
   ];
 
-  const data = [];
+  const rows = useMemo(() => {
+    if (!data?.content) return [];
+    return data.content.map((log) => ({
+      id: log.id,
+      time: log.timestamp,
+      actor: log.actorEmail ?? "SYSTEM",
+      action: log.action,
+      resource: `${log.entityType}#${log.entityId}`,
+      detail: log.outcome,
+    }));
+  }, [data]);
 
   return (
     <DashboardLayout>
@@ -26,8 +39,8 @@ export default function AuditLogs() {
 
         <DataTable
           columns={columns}
-          data={data}
-          loading={false}
+          data={rows}
+          loading={isLoading}
           emptyMessage="Chưa có log."
         />
       </div>

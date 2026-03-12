@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import DashboardLayout from "../layout/DashboardLayout";
 import DataTable from "../components/DataTable";
+import { useSemesters } from "../hooks/useUserGroups";
 
 export default function SemesterManagement() {
+  const { data, isLoading } = useSemesters();
   const columns = [
     { key: "code", header: "Semester Code" },
     { key: "name", header: "Name" },
@@ -11,7 +14,17 @@ export default function SemesterManagement() {
     { key: "actions", header: "" },
   ];
 
-  const data = [];
+  const rows = useMemo(() => {
+    if (!data) return [];
+    return data.map((semester) => ({
+      id: semester.id,
+      code: semester.semesterCode,
+      name: semester.semesterName,
+      startDate: semester.startDate,
+      endDate: semester.endDate,
+      status: semester.isActive ? "ACTIVE" : "INACTIVE",
+    }));
+  }, [data]);
 
   return (
     <DashboardLayout>
@@ -26,8 +39,8 @@ export default function SemesterManagement() {
 
         <DataTable
           columns={columns}
-          data={data}
-          loading={false}
+          data={rows}
+          loading={isLoading}
           emptyMessage="Chưa có học kỳ."
         />
       </div>

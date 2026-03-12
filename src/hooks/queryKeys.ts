@@ -1,0 +1,17 @@
+export const queryKeys = {
+  authSession: ["auth", "session"] as const,
+  adminUsers: (filters?: unknown) => ["admin", "users", filters] as const,
+  auditSecurity: (filters?: unknown) => ["admin", "audit", "security", filters] as const,
+  auditRange: (filters?: unknown) => ["admin", "audit", "range", filters] as const,
+  users: (filters?: unknown) => ["users", filters] as const,
+  user: (userId: number) => ["user", userId] as const,
+  userGroups: (userId: number) => ["user", userId, "groups"] as const,
+  semesters: ["semesters"] as const,
+  semester: (id: number) => ["semester", id] as const,
+  activeSemester: ["semester", "active"] as const,
+  groups: (filters?: unknown) => ["groups", filters] as const,
+  group: (groupId: number) => ["group", groupId] as const,
+  groupMembers: (groupId: number) => ["group", groupId, "members"] as const,
+  projectConfig: (id: string) => ["projectConfig", id] as const,
+  projectConfigByGroup: (groupId: number) => ["projectConfigByGroup", groupId] as const,
+}
