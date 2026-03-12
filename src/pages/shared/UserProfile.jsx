@@ -1,25 +1,26 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useProfile, useUpdateProfile } from "../../hooks/useAuth";
 
 export default function UserProfile() {
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
-  const [form, setForm] = useState({
-    fullName: "",
-    email: "",
+
+  const [overrides, setOverrides] = useState({
+    fullName: null,
+    email: null,
   });
 
-  useEffect(() => {
-    if (!profile) return;
-    setForm({
-      fullName: profile.fullName ?? "",
-      email: profile.email ?? "",
-    });
-  }, [profile]);
+  const form = useMemo(() => {
+    return {
+      fullName: overrides.fullName ?? profile?.fullName ?? "",
+      email: overrides.email ?? profile?.email ?? "",
+    };
+  }, [overrides.email, overrides.fullName, profile?.email, profile?.fullName]);
 
   const handleChange = (field) => (e) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    const value = e.target.value;
+    setOverrides((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {

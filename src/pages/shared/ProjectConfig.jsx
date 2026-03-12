@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import {
@@ -17,25 +17,34 @@ export default function ProjectConfig() {
   const updateConfig = useUpdateProjectConfig();
   const verifyConfig = useVerifyProjectConfig();
 
-  const [form, setForm] = useState({
-    jiraHostUrl: "",
-    jiraApiToken: "",
-    githubRepoUrl: "",
-    githubToken: "",
+  const [overrides, setOverrides] = useState({
+    jiraHostUrl: null,
+    jiraApiToken: null,
+    githubRepoUrl: null,
+    githubToken: null,
   });
 
-  useEffect(() => {
-    if (!data?.data) return;
-    setForm({
-      jiraHostUrl: data.data.jiraHostUrl ?? "",
-      jiraApiToken: data.data.jiraApiToken ?? "",
-      githubRepoUrl: data.data.githubRepoUrl ?? "",
-      githubToken: data.data.githubToken ?? "",
-    });
-  }, [data]);
+  const form = useMemo(() => {
+    return {
+      jiraHostUrl: overrides.jiraHostUrl ?? data?.data?.jiraHostUrl ?? "",
+      jiraApiToken: overrides.jiraApiToken ?? data?.data?.jiraApiToken ?? "",
+      githubRepoUrl: overrides.githubRepoUrl ?? data?.data?.githubRepoUrl ?? "",
+      githubToken: overrides.githubToken ?? data?.data?.githubToken ?? "",
+    };
+  }, [
+    data?.data?.githubRepoUrl,
+    data?.data?.githubToken,
+    data?.data?.jiraApiToken,
+    data?.data?.jiraHostUrl,
+    overrides.githubRepoUrl,
+    overrides.githubToken,
+    overrides.jiraApiToken,
+    overrides.jiraHostUrl,
+  ]);
 
   const handleChange = (field) => (e) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+    const value = e.target.value;
+    setOverrides((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
