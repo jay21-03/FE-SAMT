@@ -2,21 +2,7 @@ import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 
 export default function LecturerGrading() {
-  const grades = [
-    {
-      student: "Nguyễn Văn A",
-      group: "Team Alpha",
-      score: 8.5,
-      status: "Draft",
-    },
-    {
-      student: "Trần Thị B",
-      group: "Team Alpha",
-      score: 9.0,
-      status: "Published",
-    },
-    { student: "Lê Văn C", group: "Team Beta", score: 7.8, status: "Draft" },
-  ];
+  const grades = [];
 
   return (
     <DashboardLayout>
@@ -59,16 +45,24 @@ export default function LecturerGrading() {
               </tr>
             </thead>
             <tbody>
-              {grades.map((g) => (
-                <tr key={g.student}>
-                  <td>{g.student}</td>
-                  <td>{g.group}</td>
-                  <td>{g.score}</td>
-                  <td>
-                    <span className="status-pill status-active">{g.status}</span>
+              {grades.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: "center", padding: 16 }}>
+                    No data
                   </td>
                 </tr>
-              ))}
+              ) : (
+                grades.map((g) => (
+                  <tr key={g.student}>
+                    <td>{g.student}</td>
+                    <td>{g.group}</td>
+                    <td>{g.score}</td>
+                    <td>
+                      <span className="status-pill status-active">{g.status}</span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

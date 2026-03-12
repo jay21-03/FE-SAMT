@@ -1,6 +1,36 @@
+import { useEffect, useState } from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
+import { useProfile, useUpdateProfile } from "../../hooks/useAuth";
 
 export default function UserProfile() {
+  const { data: profile, isLoading } = useProfile();
+  const updateProfile = useUpdateProfile();
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+  });
+
+  useEffect(() => {
+    if (!profile) return;
+    setForm({
+      fullName: profile.fullName ?? "",
+      email: profile.email ?? "",
+    });
+  }, [profile]);
+
+  const handleChange = (field) => (e) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleSave = async () => {
+    await updateProfile.mutateAsync({
+      fullName: form.fullName,
+      email: form.email,
+    });
+  };
+
+  const isSaving = updateProfile.isPending;
+
   return (
     <DashboardLayout>
       <div className="admin-dashboard">
@@ -21,12 +51,29 @@ export default function UserProfile() {
             <div className="profile-form">
               <label>
                 <span>Full Name</span>
-                <input type="text" placeholder="Your full name" />
+                <input
+                  type="text"
+                  value={form.fullName}
+                  onChange={handleChange("fullName")}
+                  placeholder="Your full name"
+                  disabled={isLoading}
+                />
               </label>
               <label>
                 <span>Email</span>
-                <input type="email" placeholder="you@samt.edu.vn" disabled />
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange("email")}
+                  placeholder="you@samt.edu.vn"
+                  disabled={isLoading}
+                />
               </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="primary-button" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? "Saving..." : "Save Profile"}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -37,11 +84,11 @@ export default function UserProfile() {
             <div className="profile-form">
               <label>
                 <span>Jira ID</span>
-                <input type="text" placeholder="jira-user" disabled />
+                <input type="text" value={profile?.jiraAccountId ?? ""} disabled />
               </label>
               <label>
                 <span>GitHub Username</span>
-                <input type="text" placeholder="github-user" disabled />
+                <input type="text" value={profile?.githubUsername ?? ""} disabled />
               </label>
             </div>
           </div>

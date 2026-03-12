@@ -1,4 +1,5 @@
 import type { AuthTokens, LoginRequest, LogoutRequest, RegisterRequest } from "../types/auth"
+import type { IdentityUser, ProfileEnvelope, UpdateProfileRequest } from "../types/identity"
 import { api } from "./apiClient"
 import { tokenStore } from "./tokenStore"
 
@@ -42,5 +43,15 @@ export const authApi = {
       await api.post("/api/auth/logout", { refreshToken })
     }
     tokenStore.clear()
+  },
+
+  async getProfile(): Promise<IdentityUser> {
+    const { data } = await api.get<ProfileEnvelope>("/profile")
+    return data.data
+  },
+
+  async updateProfile(payload: UpdateProfileRequest): Promise<IdentityUser> {
+    const { data } = await api.put<ProfileEnvelope>("/profile", payload)
+    return data.data
   },
 }

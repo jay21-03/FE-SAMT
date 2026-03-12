@@ -37,30 +37,9 @@ export default function LecturerGithubStats() {
             <div className="progress-overview">
               <div className="progress-bars-grid">
                 <div className="progress-metric">
-                  <div className="metric-label">Team Alpha</div>
+                  <div className="metric-label">No data</div>
                   <div className="metric-bar">
-                    <div
-                      className="metric-bar-fill metric-commits"
-                      style={{ width: "80%" }}
-                    />
-                  </div>
-                </div>
-                <div className="progress-metric">
-                  <div className="metric-label">Team Beta</div>
-                  <div className="metric-bar">
-                    <div
-                      className="metric-bar-fill metric-commits"
-                      style={{ width: "55%" }}
-                    />
-                  </div>
-                </div>
-                <div className="progress-metric">
-                  <div className="metric-label">Team Gamma</div>
-                  <div className="metric-bar">
-                    <div
-                      className="metric-bar-fill metric-commits"
-                      style={{ width: "65%" }}
-                    />
+                    <div className="metric-bar-fill metric-commits" style={{ width: "0%" }} />
                   </div>
                 </div>
               </div>
@@ -74,19 +53,19 @@ export default function LecturerGithubStats() {
             <div className="student-stats">
               <div className="stat-row">
                 <span>Open Issues</span>
-                <span className="stat-number">24</span>
+                <span className="stat-number">0</span>
               </div>
               <div className="stat-row">
                 <span>Closed Issues</span>
-                <span className="stat-number">58</span>
+                <span className="stat-number">0</span>
               </div>
               <div className="stat-row">
                 <span>Open PRs</span>
-                <span className="stat-number">9</span>
+                <span className="stat-number">0</span>
               </div>
               <div className="stat-row">
                 <span>Merged PRs</span>
-                <span className="stat-number">31</span>
+                <span className="stat-number">0</span>
               </div>
             </div>
           </div>

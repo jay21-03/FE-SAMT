@@ -2,29 +2,8 @@ import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 
 export default function LecturerDashboard() {
-  const group = {
-    name: "Group: Team Alpha",
-    code: "CSE Capstone 2026",
-    members: 5,
-  };
-
-  const activities = [
-    {
-      text: "Task 'API Integration' updated",
-      meta: "by John - Fix bug in module",
-      time: "15 min ago",
-    },
-    {
-      text: "Commit pushed to GitHub repository",
-      meta: "Branch: feature/auth-refactor",
-      time: "22 min ago",
-    },
-    {
-      text: "New issue created in Jira",
-      meta: "SAMT-152 Improve progress chart",
-      time: "35 min ago",
-    },
-  ];
+  const group = null;
+  const activities = [];
 
   return (
     <DashboardLayout>
@@ -36,7 +15,7 @@ export default function LecturerDashboard() {
           </div>
           <div className="lecturer-header-meta">
             <span className="status-pill status-active">
-              {group.members} members
+              {group ? `${group.members} members` : "No data"}
             </span>
           </div>
         </div>
@@ -122,13 +101,19 @@ export default function LecturerDashboard() {
               <h3>Recent Activity</h3>
             </div>
             <ul className="activity-list">
-              {activities.map((a) => (
-                <li key={a.text} className="activity-item">
-                  <div className="activity-main">{a.text}</div>
-                  <div className="activity-meta">{a.meta}</div>
-                  <div className="activity-time">{a.time}</div>
+              {activities.length === 0 ? (
+                <li className="activity-item">
+                  <div className="activity-main">No data</div>
                 </li>
-              ))}
+              ) : (
+                activities.map((a) => (
+                  <li key={a.text} className="activity-item">
+                    <div className="activity-main">{a.text}</div>
+                    <div className="activity-meta">{a.meta}</div>
+                    <div className="activity-time">{a.time}</div>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
         </div>

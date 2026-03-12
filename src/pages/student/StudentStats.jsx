@@ -3,9 +3,9 @@ import DashboardLayout from "../../layout/DashboardLayout";
 
 export default function StudentStats() {
   const stats = {
-    additions: 320,
-    commits: 14,
-    deletions: 85,
+    additions: 0,
+    commits: 0,
+    deletions: 0,
   };
 
   return (

@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../../api/authApi";
-import { tokenStore } from "../../api/tokenStore";
-
-const MOCK_USERS = [
-  { email: "admin@samt.com", password: "123456", role: "ADMIN" },
-  { email: "lecturer@samt.com", password: "123456", role: "LECTURER" },
-  { email: "student@samt.com", password: "123456", role: "STUDENT", groupRole: "MEMBER" },
-  { email: "leader@samt.com", password: "123456", role: "STUDENT", groupRole: "LEADER" },
-];
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,7 +8,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [useMockData, setUseMockData] = useState(true);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,33 +15,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-      let role;
-
-      if (useMockData) {
-        const user = MOCK_USERS.find(
-          (u) => u.email === email && u.password === password,
-        );
-        if (!user) {
-          setError("Email hoặc mật khẩu không đúng");
-          setLoading(false);
-          return;
-        }
-        tokenStore.setTokens({
-          accessToken: "mock-token",
-          refreshToken: "mock-refresh-token",
-        });
-        role = user.role;
-        // gán group_role mock để test Leader/Member
-        if (user.groupRole) {
-          localStorage.setItem("group_role", user.groupRole);
-        } else {
-          localStorage.removeItem("group_role");
-        }
-      } else {
-        await authApi.login({ email, password });
-        role = "STUDENT";
-        localStorage.removeItem("group_role");
-      }
+      await authApi.login({ email, password });
+      const profile = await authApi.getProfile();
+      const role = profile.role ?? "STUDENT";
+      localStorage.removeItem("group_role");
 
       localStorage.setItem("role", role);
 
@@ -105,24 +73,7 @@ export default function Login() {
             Sử dụng tài khoản được cấp để truy cập dashboard của bạn.
           </p>
 
-          <div className="auth-test-mode">
-            <label className="auth-test-toggle">
-              <input
-                type="checkbox"
-                checked={useMockData}
-                onChange={(e) => setUseMockData(e.target.checked)}
-              />
-              <span>Test mode (Mock data, không cần backend)</span>
-            </label>
-            {useMockData && (
-              <div className="auth-test-accounts">
-                <div>admin@samt.com / 123456 (ADMIN)</div>
-                <div>lecturer@samt.com / 123456 (LECTURER)</div>
-                <div>student@samt.com / 123456 (STUDENT - MEMBER)</div>
-                <div>leader@samt.com / 123456 (STUDENT - LEADER)</div>
-              </div>
-            )}
-          </div>
+          <div className="auth-test-mode" />
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <label className="auth-field">

@@ -1,4 +1,4 @@
-import type { PageResponse, PageableQuery } from "./common"
+import type { Envelope, PageResponse, PageableQuery } from "./common"
 import type { UserRole } from "./auth"
 
 export interface IdentityUser {
@@ -38,6 +38,18 @@ export interface ExternalAccountsRequest {
 export interface ExternalAccountsResponse {
   message: string
   user: IdentityUser
+}
+
+export interface ProfileEnvelope extends Envelope<IdentityUser> {
+  status: number
+  success: boolean
+  path: string
+  correlationId: string
+}
+
+export interface UpdateProfileRequest {
+  email: string
+  fullName: string
 }
 
 export type AuditAction =

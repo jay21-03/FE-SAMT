@@ -2,26 +2,7 @@ import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 
 export default function LecturerTasks() {
-  const tasks = [
-    {
-      name: "API Integration",
-      group: "Team Alpha",
-      status: "In Progress",
-      due: "21 Jan",
-    },
-    {
-      name: "Define Grading Rubric",
-      group: "Team Beta",
-      status: "To Do",
-      due: "22 Jan",
-    },
-    {
-      name: "Review Final Report",
-      group: "Team Gamma",
-      status: "Completed",
-      due: "18 Jan",
-    },
-  ];
+  const tasks = [];
 
   return (
     <DashboardLayout>
@@ -65,18 +46,26 @@ export default function LecturerTasks() {
                 </tr>
               </thead>
               <tbody>
-                {tasks.map((t) => (
-                  <tr key={t.name}>
-                    <td>{t.name}</td>
-                    <td>{t.group}</td>
-                    <td>
-                      <span className="status-pill status-inprogress">
-                        {t.status}
-                      </span>
+                {tasks.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: "center", padding: 16 }}>
+                      No data
                     </td>
-                    <td>{t.due}</td>
                   </tr>
-                ))}
+                ) : (
+                  tasks.map((t) => (
+                    <tr key={t.name}>
+                      <td>{t.name}</td>
+                      <td>{t.group}</td>
+                      <td>
+                        <span className="status-pill status-inprogress">
+                          {t.status}
+                        </span>
+                      </td>
+                      <td>{t.due}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

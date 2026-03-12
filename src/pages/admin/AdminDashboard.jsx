@@ -1,28 +1,34 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
 import StatCard from "../../components/StatCard";
-
-const STATUS_OPTIONS = ["Active", "Invited", "Pending"];
+import { useGroups, useUsers } from "../../hooks/useUserGroups";
 
 export default function AdminDashboard() {
-  const [recentUsers, setRecentUsers] = useState([
-    { name: "Jade Deo", role: "Admin", status: "Active" },
-    { name: "Nora Milan", role: "Lecturer", status: "Active" },
-    { name: "Abel Adrian", role: "Student", status: "Invited" },
-    { name: "Deb Adrian", role: "Student", status: "Pending" },
-  ]);
+  const { data: usersData, isLoading: usersLoading } = useUsers({ page: 0, size: 5 });
+  const { data: groupsData, isLoading: groupsLoading } = useGroups({ page: 0, size: 5 });
 
-  const activeGroups = [
-    { name: "Beta Thesis", lecturer: "John Deo", progress: 78 },
-    { name: "Alpha Research", lecturer: "Anna Stone", progress: 52 },
-    { name: "Gamma Labs", lecturer: "Josh Pratt", progress: 91 },
-  ];
+  const recentUsers = useMemo(() => {
+    if (!usersData?.content) return [];
+    return usersData.content.map((user) => ({
+      id: user.id,
+      name: user.fullName,
+      role: user.roles?.[0] ?? "UNKNOWN",
+      status: user.status ?? "UNKNOWN",
+    }));
+  }, [usersData]);
 
-  const handleStatusChange = (name, nextStatus) => {
-    setRecentUsers((prev) =>
-      prev.map((u) => (u.name === name ? { ...u, status: nextStatus } : u)),
-    );
-  };
+  const activeGroups = useMemo(() => {
+    if (!groupsData?.content) return [];
+    return groupsData.content.map((group) => ({
+      id: group.id,
+      name: group.groupName,
+      lecturer: group.lecturerName,
+      members: group.memberCount,
+    }));
+  }, [groupsData]);
+
+  const totalUsers = usersData?.totalElements ?? 0;
+  const totalGroups = groupsData?.totalElements ?? 0;
 
   return (
     <DashboardLayout>
@@ -37,10 +43,10 @@ export default function AdminDashboard() {
         </div>
 
         <section className="admin-stats-row">
-          <StatCard title="Total Users" value="120" />
-          <StatCard title="Total Groups" value="25" />
-          <StatCard title="Active Projects" value="18" />
-          <StatCard title="Pending Requests" value="3" />
+          <StatCard title="Total Users" value={String(totalUsers)} />
+          <StatCard title="Total Groups" value={String(totalGroups)} />
+          <StatCard title="Active Projects" value={String(totalGroups)} />
+          <StatCard title="Pending Requests" value="0" />
         </section>
 
         <section className="admin-main-grid">
@@ -57,27 +63,27 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {recentUsers.map((u) => (
-                  <tr key={u.name}>
-                    <td>{u.name}</td>
-                    <td>{u.role}</td>
-                    <td>
-                      <select
-                        className={`status-select status-${u.status.toLowerCase()}`}
-                        value={u.status}
-                        onChange={(e) =>
-                          handleStatusChange(u.name, e.target.value)
-                        }
-                      >
-                        {STATUS_OPTIONS.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
+                {usersLoading ? (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
+                      Loading...
                     </td>
                   </tr>
-                ))}
+                ) : recentUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
+                      No data
+                    </td>
+                  </tr>
+                ) : (
+                  recentUsers.map((u) => (
+                    <tr key={u.id}>
+                      <td>{u.name}</td>
+                      <td>{u.role}</td>
+                      <td>{u.status}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -91,27 +97,31 @@ export default function AdminDashboard() {
                 <tr>
                   <th>Group Name</th>
                   <th>Lecturer</th>
-                  <th>Progress</th>
+                  <th>Members</th>
                 </tr>
               </thead>
               <tbody>
-                {activeGroups.map((g) => (
-                  <tr key={g.name}>
-                    <td>{g.name}</td>
-                    <td>{g.lecturer}</td>
-                    <td>
-                      <div className="progress-cell">
-                        <div className="progress-bar">
-                          <div
-                            className="progress-bar-fill"
-                            style={{ width: `${g.progress}%` }}
-                          />
-                        </div>
-                        <span className="progress-label">{g.progress}%</span>
-                      </div>
+                {groupsLoading ? (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
+                      Loading...
                     </td>
                   </tr>
-                ))}
+                ) : activeGroups.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
+                      No data
+                    </td>
+                  </tr>
+                ) : (
+                  activeGroups.map((g) => (
+                    <tr key={g.id}>
+                      <td>{g.name}</td>
+                      <td>{g.lecturer}</td>
+                      <td>{g.members}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -125,15 +135,15 @@ export default function AdminDashboard() {
             <div className="system-status-grid">
               <div className="system-status-item">
                 <span>Jira API</span>
-                <span className="status-pill status-active">Connected</span>
+                <span className="status-pill status-pending">Unknown</span>
               </div>
               <div className="system-status-item">
                 <span>GitHub API</span>
-                <span className="status-pill status-active">Connected</span>
+                <span className="status-pill status-pending">Unknown</span>
               </div>
               <div className="system-status-item">
                 <span>Server Status</span>
-                <span className="status-pill status-active">Online</span>
+                <span className="status-pill status-pending">Unknown</span>
               </div>
             </div>
           </div>
