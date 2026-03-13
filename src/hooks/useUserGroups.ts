@@ -26,6 +26,13 @@ export const useUser = (userId: number) =>
     enabled: userId > 0,
   })
 
+export const useUserGroups = (userId: number) =>
+  useQuery({
+    queryKey: queryKeys.userGroups(userId),
+    queryFn: () => userGroupApi.getUserGroups(userId),
+    enabled: userId > 0,
+  })
+
 export const useGroups = (query?: GroupListQuery) =>
   useQuery({
     queryKey: queryKeys.groups(query),

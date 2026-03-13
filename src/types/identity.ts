@@ -6,6 +6,7 @@ export interface IdentityUser {
   email: string
   fullName: string
   role?: UserRole
+  roles?: UserRole[]
   status?: string
   jiraAccountId?: string | null
   githubUsername?: string | null

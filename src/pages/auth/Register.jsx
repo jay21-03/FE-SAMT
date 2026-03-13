@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../../api/authApi";
 
@@ -10,47 +10,71 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
 
-  const validatePassword = (value) => {
-    const rules = [
-      /.{8,}/,
-      /[A-Z]/,
-      /[a-z]/,
-      /[0-9]/,
-      /[^A-Za-z0-9]/,
+  const passwordRules = useMemo(() => {
+    return [
+      { label: "Ít nhất 8 ký tự", valid: password.length >= 8 },
+      { label: "Có chữ hoa (A-Z)", valid: /[A-Z]/.test(password) },
+      { label: "Có chữ thường (a-z)", valid: /[a-z]/.test(password) },
+      { label: "Có số (0-9)", valid: /[0-9]/.test(password) },
+      { label: "Có ký tự đặc biệt (!@#$...)", valid: /[^A-Za-z0-9]/.test(password) },
     ];
-    return rules.every((r) => r.test(value));
-  };
+  }, [password]);
+
+  const isPasswordValid = passwordRules.every((rule) => rule.valid);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setSuccess(false);
+
+    if (!fullName.trim()) {
+      setError("Vui lòng nhập họ tên.");
+      return;
+    }
+
+    if (!email.trim()) {
+      setError("Vui lòng nhập email.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Password và Confirm Password không khớp.");
       return;
     }
 
-    if (!validatePassword(password)) {
-      setError(
-        "Mật khẩu phải ≥ 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.",
-      );
+    if (!isPasswordValid) {
+      setError("Mật khẩu chưa đáp ứng đủ yêu cầu.");
       return;
     }
 
     try {
       setLoading(true);
       await authApi.register({
-        email,
+        email: email.trim(),
         password,
         confirmPassword,
-        fullName,
+        fullName: fullName.trim(),
         role: "STUDENT",
       });
-      navigate("/login");
+      setSuccess(true);
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (err) {
       console.error(err);
-      setError("Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.");
+      const response = err?.response;
+      if (response?.status === 409) {
+        setError("Email này đã được đăng ký. Vui lòng sử dụng email khác.");
+      } else if (response?.status === 400) {
+        const message = response?.data?.message || response?.data?.error;
+        setError(message || "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
+      } else if (response?.data?.message) {
+        setError(response.data.message);
+      } else {
+        setError("Đăng ký thất bại. Vui lòng thử lại sau.");
+      }
     } finally {
       setLoading(false);
     }
@@ -81,70 +105,100 @@ export default function Register() {
             sau khi được duyệt.
           </p>
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <label className="auth-field">
-              <span>Full Name</span>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                placeholder="Nguyen Van A"
-              />
-            </label>
+          {success ? (
+            <div className="auth-success">
+              <div className="auth-success-icon">✓</div>
+              <h3>Đăng ký thành công!</h3>
+              <p>Đang chuyển hướng đến trang đăng nhập...</p>
+            </div>
+          ) : (
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <label className="auth-field">
+                <span>Họ và tên</span>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  placeholder="Nguyen Van A"
+                  disabled={loading}
+                />
+              </label>
 
-            <label className="auth-field">
-              <span>Email</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="you@samt.edu.vn"
-              />
-            </label>
+              <label className="auth-field">
+                <span>Email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="you@samt.edu.vn"
+                  disabled={loading}
+                />
+              </label>
 
-            <label className="auth-field">
-              <span>Password</span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-              />
-            </label>
+              <label className="auth-field">
+                <span>Mật khẩu</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  disabled={loading}
+                />
+              </label>
 
-            <label className="auth-field">
-              <span>Confirm Password</span>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-              />
-            </label>
+              {password && (
+                <div className="password-rules">
+                  {passwordRules.map((rule, index) => (
+                    <div
+                      key={index}
+                      className={`password-rule ${rule.valid ? "valid" : "invalid"}`}
+                    >
+                      <span className="rule-icon">{rule.valid ? "✓" : "✗"}</span>
+                      <span>{rule.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            {error && <div className="auth-error">{error}</div>}
+              <label className="auth-field">
+                <span>Xác nhận mật khẩu</span>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  disabled={loading}
+                />
+              </label>
 
-            <button className="auth-button" type="submit" disabled={loading}>
-              {loading ? "Đang đăng ký..." : "Đăng ký"}
-            </button>
-          </form>
+              {confirmPassword && password !== confirmPassword && (
+                <div className="password-mismatch">
+                  Mật khẩu xác nhận không khớp
+                </div>
+              )}
 
-          <div className="auth-footer-note">
+              {error && <div className="auth-error">{error}</div>}
+
+              <button
+                className="auth-button"
+                type="submit"
+                disabled={loading || !isPasswordValid || password !== confirmPassword}
+              >
+                {loading ? "Đang đăng ký..." : "Đăng ký tài khoản"}
+              </button>
+            </form>
+          )}
+
+          <div className="auth-register-link">
             Đã có tài khoản?{" "}
             <button
               type="button"
               onClick={() => navigate("/login")}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#60a5fa",
-                cursor: "pointer",
-                padding: 0,
-              }}
+              className="auth-link-button"
             >
               Đăng nhập ngay
             </button>

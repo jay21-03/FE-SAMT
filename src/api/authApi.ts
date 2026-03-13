@@ -58,7 +58,7 @@ export const authApi = {
   },
 
   async updateProfile(payload: UpdateProfileRequest): Promise<IdentityUser> {
-    const { data } = await api.put<ProfileEnvelope>("/profile", payload)
+    const { data } = await api.put<ProfileEnvelope>("/api/users/me", payload)
     return data.data
   },
 }

@@ -1,8 +1,88 @@
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
+import DataTable from "../../components/DataTable";
+import { useGroupProgress } from "../../hooks/useReport";
+import { useGroups, useSemesters, useGroupMembers } from "../../hooks/useUserGroups";
 
 export default function LecturerGrading() {
-  const grades = [];
+  const [selectedSemester, setSelectedSemester] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState("");
+
+  // Fetch semesters
+  const { data: semestersData } = useSemesters();
+  const semesters = semestersData?.data?.content || semestersData?.content || semestersData || [];
+
+  // Fetch groups
+  const { data: groupsData, isLoading: groupsLoading } = useGroups({
+    page: 0,
+    size: 100,
+    semesterId: selectedSemester || undefined,
+  });
+  const groups = groupsData?.data?.content || groupsData?.content || [];
+
+  // Get active group
+  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : groups[0]?.id || 0;
+  const activeGroup = groups.find((g) => g.id === activeGroupId);
+
+  // Fetch group members
+  const { data: membersData, isLoading: membersLoading } = useGroupMembers(activeGroupId);
+  const members = membersData || [];
+
+  // Fetch group progress for context
+  const { data: progress } = useGroupProgress(activeGroupId);
+
+  const isLoading = groupsLoading || membersLoading;
+
+  const columns = [
+    {
+      key: "fullName",
+      header: "Student",
+      render: (row) => (
+        <div>
+          <span style={{ fontWeight: 500 }}>{row.fullName}</span>
+          <div style={{ fontSize: 11, color: "#6b7280" }}>{row.email}</div>
+        </div>
+      ),
+    },
+    {
+      key: "role",
+      header: "Role",
+      render: (row) => (
+        <span
+          style={{
+            fontSize: 11,
+            padding: "2px 8px",
+            borderRadius: 4,
+            background: row.role === "LEADER" ? "#fef3c7" : "#f3f4f6",
+            color: row.role === "LEADER" ? "#d97706" : "#374151",
+          }}
+        >
+          {row.role}
+        </span>
+      ),
+    },
+    {
+      key: "joinedAt",
+      header: "Joined",
+      render: (row) => (
+        <span style={{ fontSize: 12, color: "#6b7280" }}>
+          {row.joinedAt
+            ? new Date(row.joinedAt).toLocaleDateString("en-US")
+            : "-"}
+        </span>
+      ),
+    },
+    {
+      key: "grade",
+      header: "Grade",
+      render: () => (
+        <span style={{ color: "#9ca3af", fontStyle: "italic", fontSize: 12 }}>
+          Not available
+        </span>
+      ),
+    },
+  ];
 
   return (
     <DashboardLayout>
@@ -11,7 +91,7 @@ export default function LecturerGrading() {
           <div>
             <h1 className="page-title">Grading</h1>
             <p className="page-subtitle">
-              Quản lý điểm số và trạng thái chấm của từng sinh viên.
+              View group members and track student contributions.
             </p>
           </div>
         </div>
@@ -31,43 +111,115 @@ export default function LecturerGrading() {
           </Link>
         </div>
 
+        {/* Filters */}
         <div className="panel" style={{ marginTop: 16 }}>
           <div className="panel-header">
-            <h3>Scores</h3>
+            <h3>Select Group</h3>
           </div>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Group</th>
-                <th>Score</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grades.length === 0 ? (
-                <tr>
-                  <td colSpan={4} style={{ textAlign: "center", padding: 16 }}>
-                    No data
-                  </td>
-                </tr>
-              ) : (
-                grades.map((g) => (
-                  <tr key={g.student}>
-                    <td>{g.student}</td>
-                    <td>{g.group}</td>
-                    <td>{g.score}</td>
-                    <td>
-                      <span className="status-pill status-active">{g.status}</span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "12px 0" }}>
+            <label className="modal-field" style={{ margin: 0, minWidth: 150 }}>
+              <span>Semester</span>
+              <select
+                value={selectedSemester}
+                onChange={(e) => {
+                  setSelectedSemester(e.target.value);
+                  setSelectedGroupId("");
+                }}
+              >
+                <option value="">All Semesters</option>
+                {semesters.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.code || s.semesterCode} {s.active && "(Active)"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="modal-field" style={{ margin: 0, minWidth: 200 }}>
+              <span>Group</span>
+              <select
+                value={selectedGroupId}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
+              >
+                {groups.length === 0 ? (
+                  <option value="">No groups</option>
+                ) : (
+                  groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.groupName}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+          </div>
+        </div>
+
+        {/* Group Progress Stats */}
+        {progress && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, marginTop: 16 }}>
+            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
+              <div className="stat-value" style={{ fontSize: 20 }}>
+                {members.length}
+              </div>
+              <div className="stat-label">Members</div>
+            </div>
+            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
+              <div className="stat-value" style={{ fontSize: 20, color: "#10b981" }}>
+                {progress.doneCount}
+              </div>
+              <div className="stat-label">Tasks Done</div>
+            </div>
+            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
+              <div className="stat-value" style={{ fontSize: 20 }}>
+                {Math.round(progress.completionRate * 100)}%
+              </div>
+              <div className="stat-label">Completion</div>
+            </div>
+          </div>
+        )}
+
+        {/* Members Table */}
+        <div className="panel" style={{ marginTop: 16 }}>
+          <div className="panel-header">
+            <h3>Group Members</h3>
+            {activeGroup && (
+              <span style={{ fontSize: 12, color: "#6b7280" }}>
+                {activeGroup.groupName}
+              </span>
+            )}
+          </div>
+          <DataTable
+            columns={columns}
+            data={members}
+            keyField="userId"
+            loading={isLoading}
+            emptyMessage={
+              activeGroupId
+                ? "No members found in this group."
+                : "Please select a group to view members."
+            }
+          />
+        </div>
+
+        {/* Info Panel */}
+        <div className="panel" style={{ marginTop: 16 }}>
+          <div className="panel-header">
+            <h3>About Grading</h3>
+          </div>
+          <div style={{ padding: "12px 0", color: "#6b7280", fontSize: 14, lineHeight: 1.6 }}>
+            <div style={{ background: "#fef3c7", padding: 12, borderRadius: 8, marginBottom: 12 }}>
+              <strong style={{ color: "#d97706" }}>Note:</strong> The grading feature is currently not available in the backend API.
+              This page shows group members for reference.
+            </div>
+            <p>To evaluate students, consider:</p>
+            <ul style={{ marginTop: 8, marginLeft: 20 }}>
+              <li><strong>Tasks:</strong> View task completion in the Tasks tab</li>
+              <li><strong>GitHub Stats:</strong> Check commit and PR activity in GitHub Stats tab</li>
+              <li><strong>Reports:</strong> Generate SRS reports to assess project documentation</li>
+            </ul>
+          </div>
         </div>
       </div>
     </DashboardLayout>
   );
 }
-

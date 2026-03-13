@@ -37,7 +37,7 @@ export default function AdminDashboard() {
           <div>
             <h1 className="page-title">Admin Dashboard</h1>
             <p className="page-subtitle">
-              Tổng quan người dùng, nhóm và trạng thái hệ thống.
+              Overview of users, groups, and system status.
             </p>
           </div>
         </div>

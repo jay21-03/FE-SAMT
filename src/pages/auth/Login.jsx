@@ -109,6 +109,17 @@ export default function Login() {
             Bằng cách đăng nhập, bạn đồng ý với chính sách sử dụng hệ thống
             SAMT.
           </div>
+
+          <div className="auth-register-link">
+            Chưa có tài khoản?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+              className="auth-link-button"
+            >
+              Đăng ký ngay
+            </button>
+          </div>
         </div>
       </div>
     </div>

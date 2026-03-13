@@ -10,11 +10,28 @@ export const useSecurityEvents = (query?: AuditQuery) =>
     staleTime: 15_000,
   })
 
-export const useAuditRange = (query?: AuditQuery) =>
+export const useAuditRange = (query?: AuditQuery, enabled = true) =>
   useQuery({
     queryKey: queryKeys.auditRange(query),
     queryFn: () => identityAdminApi.getAuditByRange(query),
     staleTime: 15_000,
+    enabled,
+  })
+
+export const useAuditByEntity = (entityType: string, entityId: number, query?: AuditQuery) =>
+  useQuery({
+    queryKey: queryKeys.auditByEntity(entityType, entityId, query),
+    queryFn: () => identityAdminApi.getAuditByEntity(entityType, entityId, query),
+    staleTime: 15_000,
+    enabled: !!entityType && entityId > 0,
+  })
+
+export const useAuditByActor = (actorId: number, query?: AuditQuery) =>
+  useQuery({
+    queryKey: queryKeys.auditByActor(actorId, query),
+    queryFn: () => identityAdminApi.getAuditByActor(actorId, query),
+    staleTime: 15_000,
+    enabled: actorId > 0,
   })
 
 export const useCreateAdminUser = () => {

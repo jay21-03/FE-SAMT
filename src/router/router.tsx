@@ -4,9 +4,11 @@ import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import UserManagement from "../pages/admin/UserManagement";
+import UserDetail from "../pages/admin/UserDetail";
 import SemesterManagement from "../pages/admin/SemesterManagement";
+import ProjectConfigList from "../pages/admin/ProjectConfigList";
 import AuditLogs from "../pages/admin/AuditLogs";
-import SystemConfig from "../pages/admin/SystemConfig";
+import SyncJobs from "../pages/admin/SyncJobs";
 import LecturerDashboard from "../pages/lecturer/LecturerDashboard";
 import LecturerTasks from "../pages/lecturer/LecturerTasks";
 import LecturerGithubStats from "../pages/lecturer/LecturerGithubStats";
@@ -18,6 +20,7 @@ import UserProfile from "../pages/shared/UserProfile";
 import GroupList from "../pages/shared/GroupList";
 import GroupDetails from "../pages/shared/GroupDetails";
 import ProjectConfig from "../pages/shared/ProjectConfig";
+import Reports from "../pages/shared/Reports";
 import ProtectedRoute from "./ProtectedRoute";
 
 export default function AppRouter() {
@@ -121,10 +124,28 @@ export default function AppRouter() {
       />
 
       <Route
+        path="/app/admin/users/:userId"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <UserDetail />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/app/admin/semesters"
         element={
           <ProtectedRoute allowedRoles={["ADMIN"]}>
             <SemesterManagement />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/app/admin/project-configs"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <ProjectConfigList />
           </ProtectedRoute>
         }
       />
@@ -139,10 +160,10 @@ export default function AppRouter() {
       />
 
       <Route
-        path="/app/admin/system-config"
+        path="/app/admin/sync-jobs"
         element={
           <ProtectedRoute allowedRoles={["ADMIN"]}>
-            <SystemConfig />
+            <SyncJobs />
           </ProtectedRoute>
         }
       />
@@ -171,6 +192,16 @@ export default function AppRouter() {
         element={
           <ProtectedRoute allowedRoles={["ADMIN", "STUDENT"]}>
             <ProjectConfig />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Reports */}
+      <Route
+        path="/app/reports"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "LECTURER"]}>
+            <Reports />
           </ProtectedRoute>
         }
       />

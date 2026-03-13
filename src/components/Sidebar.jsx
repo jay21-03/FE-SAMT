@@ -28,8 +28,20 @@ export default function Sidebar() {
             <Link className="sidebar-link" to="/app/groups">
               <span>Group Management</span>
             </Link>
-            <Link className="sidebar-link" to="/app/admin/system-config">
-              <span>System Config</span>
+            <Link className="sidebar-link" to="/app/admin/semesters">
+              <span>Semester Management</span>
+            </Link>
+            <Link className="sidebar-link" to="/app/admin/project-configs">
+              <span>Project Configs</span>
+            </Link>
+            <Link className="sidebar-link" to="/app/admin/sync-jobs">
+              <span>Sync Jobs</span>
+            </Link>
+            <Link className="sidebar-link" to="/app/reports">
+              <span>Reports</span>
+            </Link>
+            <Link className="sidebar-link" to="/app/admin/audit-logs">
+              <span>Audit Logs</span>
             </Link>
           </div>
         </nav>
@@ -50,6 +62,9 @@ export default function Sidebar() {
             </Link>
             <Link className="sidebar-link" to="/app/lecturer/grading">
               <span>Grading</span>
+            </Link>
+            <Link className="sidebar-link" to="/app/reports">
+              <span>Reports</span>
             </Link>
           </div>
         </nav>

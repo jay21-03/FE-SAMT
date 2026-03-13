@@ -10,6 +10,10 @@ export default function Header() {
     navigate("/login");
   };
 
+  const handleProfile = () => {
+    navigate("/app/profile");
+  };
+
   const role = localStorage.getItem("role");
 
   return (
@@ -26,19 +30,12 @@ export default function Header() {
           <span className="role-label">{role}</span>
         </div>
 
-        <button className="icon-button" aria-label="Search">
-          🔍
-        </button>
-        <button className="icon-button" aria-label="Notifications">
-          🔔
-        </button>
-
-        <button className="avatar-button" aria-label="Profile">
+        <button className="avatar-button" aria-label="Profile" onClick={handleProfile}>
           <span className="avatar-circle">U</span>
         </button>
 
         <button className="logout-button" onClick={handleLogout}>
-          Đăng xuất
+          Logout
         </button>
       </div>
     </header>
