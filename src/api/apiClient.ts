@@ -34,6 +34,11 @@ function withBearer(token: string): string {
   return `Bearer ${token}`
 }
 
+function unwrapAuthTokens(payload: any): AuthTokens {
+  const authData = payload && payload.data ? payload.data : payload
+  return authData as AuthTokens
+}
+
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const accessToken = tokenStore.getAccessToken()
   if (!accessToken) return config
@@ -51,12 +56,13 @@ async function runRefreshFlow(): Promise<AuthTokens> {
   }
 
   const payload: RefreshTokenRequest = { refreshToken }
-  const { data } = await refreshClient.post<AuthTokens>("/api/auth/refresh", payload)
+  const { data } = await refreshClient.post<unknown>("/api/auth/refresh", payload)
+  const tokens = unwrapAuthTokens(data)
   tokenStore.setTokens({
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
   })
-  return data
+  return tokens
 }
 
 api.interceptors.response.use(
@@ -69,7 +75,15 @@ api.interceptors.response.use(
       throw error
     }
 
-    if (originalConfig.url?.includes("/api/auth/refresh")) {
+    const url = originalConfig.url ?? ""
+
+    // Never run refresh flow for public auth endpoints.
+    if (
+      url.includes("/api/auth/login") ||
+      url.includes("/api/auth/register") ||
+      url.includes("/api/auth/logout") ||
+      url.includes("/api/auth/refresh")
+    ) {
       tokenStore.clear()
       throw error
     }

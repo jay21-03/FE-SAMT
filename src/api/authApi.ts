@@ -17,11 +17,17 @@ export interface RegisterResponse {
   expiresIn: number
 }
 
+function unwrapAuthTokens(payload: any): AuthTokens {
+  const authData = payload && payload.data ? payload.data : payload
+  return authData as AuthTokens
+}
+
 export const authApi = {
   async login(payload: LoginRequest): Promise<AuthTokens> {
-    const { data } = await api.post<AuthTokens>("/api/auth/login", payload)
-    tokenStore.setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken })
-    return data
+    const { data } = await api.post<unknown>("/api/auth/login", payload)
+    const tokens = unwrapAuthTokens(data)
+    tokenStore.setTokens({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken })
+    return tokens
   },
 
   async register(payload: RegisterRequest): Promise<RegisterResponse> {
@@ -32,9 +38,10 @@ export const authApi = {
   async refresh(): Promise<AuthTokens> {
     const refreshToken = tokenStore.getRefreshToken()
     if (!refreshToken) throw new Error("Missing refresh token")
-    const { data } = await api.post<AuthTokens>("/api/auth/refresh", { refreshToken })
-    tokenStore.setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken })
-    return data
+    const { data } = await api.post<unknown>("/api/auth/refresh", { refreshToken })
+    const tokens = unwrapAuthTokens(data)
+    tokenStore.setTokens({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken })
+    return tokens
   },
 
   async logout(payload?: LogoutRequest): Promise<void> {
@@ -46,7 +53,7 @@ export const authApi = {
   },
 
   async getProfile(): Promise<IdentityUser> {
-    const { data } = await api.get<ProfileEnvelope>("/profile")
+    const { data } = await api.get<ProfileEnvelope>("/api/users/me")
     return data.data
   },
 
