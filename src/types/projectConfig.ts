@@ -3,6 +3,7 @@ import type { Envelope } from "./common"
 export interface CreateConfigRequest {
   groupId: number
   jiraHostUrl: string
+  jiraEmail: string
   jiraApiToken: string
   githubRepoUrl: string
   githubToken: string
@@ -10,6 +11,7 @@ export interface CreateConfigRequest {
 
 export interface UpdateConfigRequest {
   jiraHostUrl?: string
+  jiraEmail?: string
   jiraApiToken?: string
   githubRepoUrl?: string
   githubToken?: string
@@ -19,6 +21,7 @@ export interface ConfigData {
   id: string
   groupId: number
   jiraHostUrl: string
+  jiraEmail: string
   jiraApiToken: string
   githubRepoUrl: string
   githubToken: string

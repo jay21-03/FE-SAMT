@@ -19,6 +19,7 @@ export default function ProjectConfig() {
 
   const [overrides, setOverrides] = useState({
     jiraHostUrl: null,
+    jiraEmail: null,
     jiraApiToken: null,
     githubRepoUrl: null,
     githubToken: null,
@@ -27,6 +28,7 @@ export default function ProjectConfig() {
   const form = useMemo(() => {
     return {
       jiraHostUrl: overrides.jiraHostUrl ?? data?.data?.jiraHostUrl ?? "",
+      jiraEmail: overrides.jiraEmail ?? data?.data?.jiraEmail ?? "",
       jiraApiToken: overrides.jiraApiToken ?? data?.data?.jiraApiToken ?? "",
       githubRepoUrl: overrides.githubRepoUrl ?? data?.data?.githubRepoUrl ?? "",
       githubToken: overrides.githubToken ?? data?.data?.githubToken ?? "",
@@ -34,13 +36,23 @@ export default function ProjectConfig() {
   }, [
     data?.data?.githubRepoUrl,
     data?.data?.githubToken,
+    data?.data?.jiraEmail,
     data?.data?.jiraApiToken,
     data?.data?.jiraHostUrl,
     overrides.githubRepoUrl,
     overrides.githubToken,
+    overrides.jiraEmail,
     overrides.jiraApiToken,
     overrides.jiraHostUrl,
   ]);
+
+  const toTrimmedPayload = (values) => {
+    return Object.fromEntries(
+      Object.entries(values)
+        .map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])
+        .filter(([, value]) => value !== "" && value !== null && value !== undefined),
+    );
+  };
 
   const handleChange = (field) => (e) => {
     const value = e.target.value;
@@ -50,13 +62,16 @@ export default function ProjectConfig() {
   const handleSave = async () => {
     if (!groupIdNumber) return;
     if (data?.data?.id) {
-      await updateConfig.mutateAsync({ id: data.data.id, payload: form });
+      const payload = toTrimmedPayload(overrides);
+      if (Object.keys(payload).length === 0) return;
+      await updateConfig.mutateAsync({ id: data.data.id, payload });
       return;
     }
 
+    const payload = toTrimmedPayload(form);
     await createConfig.mutateAsync({
       groupId: groupIdNumber,
-      ...form,
+      ...payload,
     });
   };
 
@@ -93,6 +108,16 @@ export default function ProjectConfig() {
                   value={form.jiraHostUrl}
                   onChange={handleChange("jiraHostUrl")}
                   placeholder="https://your-domain.atlassian.net"
+                  disabled={isLoading}
+                />
+              </label>
+              <label>
+                <span>Jira Email</span>
+                <input
+                  type="email"
+                  value={form.jiraEmail}
+                  onChange={handleChange("jiraEmail")}
+                  placeholder="you@example.com"
                   disabled={isLoading}
                 />
               </label>
