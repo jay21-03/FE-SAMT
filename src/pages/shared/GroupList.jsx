@@ -7,7 +7,7 @@ import { useGroups } from "../../hooks/useUserGroups";
 
 export default function GroupList() {
   const [search, setSearch] = useState("");
-  const { data, isLoading } = useGroups({ search, page: 0, size: 20 });
+  const { data, isLoading } = useGroups({ page: 0, size: 20 });
 
   const columns = [
     { key: "name", header: "Group Name" },
@@ -28,7 +28,8 @@ export default function GroupList() {
 
   const rows = useMemo(() => {
     if (!data?.content) return [];
-    return data.content.map((item) => ({
+    const keyword = search.trim().toLowerCase();
+    const mapped = data.content.map((item) => ({
       id: item.id,
       name: item.groupName,
       semester: item.semesterCode,
@@ -36,7 +37,9 @@ export default function GroupList() {
       members: item.memberCount,
       status: "ACTIVE",
     }));
-  }, [data]);
+    if (!keyword) return mapped;
+    return mapped.filter((group) => group.name.toLowerCase().includes(keyword));
+  }, [data, search]);
 
   return (
     <DashboardLayout>
