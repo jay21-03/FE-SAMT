@@ -23,6 +23,12 @@ export const reportQueryKeys = {
     ["recentActivities", groupId, query] as const,
 };
 
+const retryUnlessForbidden = (failureCount: number, error: any) => {
+  const status = error?.response?.status;
+  if (status === 403) return false;
+  return failureCount < 2;
+};
+
 // ============ Report Management Hooks ============
 
 /**
@@ -129,6 +135,7 @@ export const useGroupProgress = (groupId: number, query?: GroupProgressQuery) =>
     queryKey: reportQueryKeys.groupProgress(groupId, query),
     queryFn: () => reportApi.getGroupProgress(groupId, query),
     enabled: groupId > 0,
+    retry: retryUnlessForbidden,
     staleTime: 60_000,
   });
 
@@ -140,5 +147,6 @@ export const useRecentActivities = (groupId: number, query?: RecentActivitiesQue
     queryKey: reportQueryKeys.recentActivities(groupId, query),
     queryFn: () => reportApi.getRecentActivities(groupId, query),
     enabled: groupId > 0,
+    retry: retryUnlessForbidden,
     staleTime: 30_000,
   });

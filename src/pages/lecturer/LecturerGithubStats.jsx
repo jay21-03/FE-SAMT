@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useLecturerOverview, useRecentActivities } from "../../hooks/useReport";
@@ -10,33 +10,38 @@ export default function LecturerGithubStats() {
 
   // Fetch semesters
   const { data: semestersData } = useSemesters();
-  const semesters = semestersData?.data?.content || semestersData?.content || semestersData || [];
+  const semesters = Array.isArray(semestersData) ? semestersData : [];
 
   // Fetch lecturer overview for global stats
-  const { data: overview, isLoading: overviewLoading } = useLecturerOverview(
+  const { data: overview } = useLecturerOverview(
     selectedSemester ? { semesterId: Number(selectedSemester) } : undefined
   );
 
   // Fetch groups
-  const { data: groupsData, isLoading: groupsLoading } = useGroups({
+  const { data: groupsData } = useGroups({
     page: 0,
     size: 100,
-    semesterId: selectedSemester || undefined,
+    semesterId: selectedSemester ? Number(selectedSemester) : undefined,
   });
-  const groups = groupsData?.data?.content || groupsData?.content || [];
+  const groups = groupsData?.content || [];
+
+  // Auto-select first group when groups load
+  useEffect(() => {
+    if (groups.length > 0 && !selectedGroupId) {
+      setSelectedGroupId(String(groups[0].id));
+    }
+  }, [groups, selectedGroupId]);
 
   // Get active group
-  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : groups[0]?.id || 0;
+  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : (groups[0]?.id || 0);
 
-  // Fetch recent GitHub activities for selected group
+  // Fetch recent GitHub activities for selected group - only if activeGroupId is valid
   const { data: activitiesData, isLoading: activitiesLoading } = useRecentActivities(
     activeGroupId,
     { source: "GITHUB", page: 0, size: 20 }
   );
 
-  const activities = activitiesData?.content || [];
-
-  const isLoading = overviewLoading || groupsLoading;
+  const activities = useMemo(() => activitiesData?.content || [], [activitiesData]);
 
   // Analyze GitHub activities
   const githubStats = useMemo(() => {
@@ -49,7 +54,7 @@ export default function LecturerGithubStats() {
     const authorCounts = {};
     activities.forEach((a) => {
       if (a.author) {
-        authorCounts[a.author] = (authorCounts[a.author] || 0) + 1;
+        authorCounts[a.author] = (authorCounts[a.author] ?? 0) + 1;
       }
     });
 
@@ -109,7 +114,7 @@ export default function LecturerGithubStats() {
                 <option value="">All Semesters</option>
                 {semesters.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.code || s.semesterCode} {s.active && "(Active)"}
+                    {s.semesterCode} {s.isActive && "(Active)"}
                   </option>
                 ))}
               </select>

@@ -33,10 +33,11 @@ export const useUserGroups = (userId: number) =>
     enabled: userId > 0,
   })
 
-export const useGroups = (query?: GroupListQuery) =>
+export const useGroups = (query?: GroupListQuery, options?: { enabled?: boolean }) =>
   useQuery({
     queryKey: queryKeys.groups(query),
     queryFn: () => userGroupApi.listGroups(query),
+    enabled: options?.enabled ?? true,
     staleTime: 60_000,
   })
 
@@ -44,12 +45,14 @@ export const useGroup = (groupId: number) =>
   useQuery({
     queryKey: queryKeys.group(groupId),
     queryFn: () => userGroupApi.getGroup(groupId),
+    enabled: groupId > 0,
   })
 
 export const useGroupMembers = (groupId: number) =>
   useQuery({
     queryKey: queryKeys.groupMembers(groupId),
     queryFn: () => userGroupApi.getGroupMembers(groupId),
+    enabled: groupId > 0,
   })
 
 export const useSemesters = () =>

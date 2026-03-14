@@ -29,7 +29,7 @@ export default function GroupDetails() {
   const { data: group, isLoading: groupLoading, refetch } = useGroup(groupIdNumber);
   const { data: studentsData } = useUsers({ role: "STUDENT", page: 0, size: 200 });
 
-  const students = studentsData?.content || [];
+  const students = useMemo(() => studentsData?.content || [], [studentsData]);
 
   const memberRows = useMemo(() => {
     if (!group?.members?.length) return [];

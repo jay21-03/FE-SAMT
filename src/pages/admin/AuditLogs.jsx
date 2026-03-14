@@ -153,10 +153,6 @@ export default function AuditLogs() {
   const totalPages = data?.data?.totalPages || data?.totalPages || 1;
   const totalElements = data?.data?.totalElements || data?.totalElements || 0;
 
-  const handleSearch = () => {
-    setPage(0);
-  };
-
   const handleClearFilters = () => {
     setFilterType("security");
     setStartDate("");

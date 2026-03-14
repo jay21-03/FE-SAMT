@@ -727,7 +727,7 @@ export default function Reports() {
                       Project Configuration
                     </div>
                     <div style={{ fontFamily: "monospace", fontSize: 13 }}>
-                      {configData.data.id.substring(0, 12)}...
+                      {String(configData.data.id).substring(0, 12)}...
                     </div>
                   </div>
                   <span

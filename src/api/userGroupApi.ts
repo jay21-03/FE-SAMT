@@ -113,8 +113,9 @@ export const userGroupApi = {
   },
 
   async getGroupMembers(groupId: number) {
-    const r = await api.get<MemberResponse[]>(`/api/groups/${groupId}/members`)
-    return unwrapData<MemberResponse[]>(r.data)
+    const r = await api.get(`/api/groups/${groupId}/members`)
+    const payload = unwrapData<any>(r.data)
+    return Array.isArray(payload?.content) ? payload.content : (payload as MemberResponse[])
   },
 
   async addMember(groupId: number, payload: AddMemberRequest) {

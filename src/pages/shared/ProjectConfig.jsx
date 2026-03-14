@@ -13,10 +13,12 @@ import { useSyncJira, useSyncGithub, useSyncAll, useSyncJobs } from "../../hooks
 export default function ProjectConfig() {
   const { groupId } = useParams();
   const navigate = useNavigate();
-  const groupIdNumber = Number(groupId);
+  const parsedGroupId = Number(groupId);
+  const hasValidGroupId = Number.isInteger(parsedGroupId) && parsedGroupId > 0;
+  const groupIdNumber = hasValidGroupId ? parsedGroupId : 0;
   const role = localStorage.getItem("role");
 
-  const { data, isLoading } = useProjectConfigByGroup(groupIdNumber);
+  const { data, isLoading } = useProjectConfigByGroup(groupIdNumber, { enabled: hasValidGroupId });
   const { data: group } = useGroup(groupIdNumber);
   const createConfig = useCreateProjectConfig();
   const updateConfig = useUpdateProjectConfig();
@@ -38,6 +40,8 @@ export default function ProjectConfig() {
   // Sync state
   const [syncMessage, setSyncMessage] = useState(null);
   const [syncError, setSyncError] = useState(null);
+  const [validationError, setValidationError] = useState(null);
+  const [saveError, setSaveError] = useState(null);
 
   const [overrides, setOverrides] = useState({
     jiraHostUrl: null,
@@ -78,23 +82,44 @@ export default function ProjectConfig() {
 
   const handleChange = (field) => (e) => {
     const value = e.target.value;
+    setValidationError(null);
+    setSaveError(null);
     setOverrides((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
-    if (!groupIdNumber) return;
+    if (!hasValidGroupId) return;
+    setValidationError(null);
+    setSaveError(null);
+
     if (data?.data?.id) {
       const payload = toTrimmedPayload(overrides);
-      if (Object.keys(payload).length === 0) return;
-      await updateConfig.mutateAsync({ id: data.data.id, payload });
+      if (Object.keys(payload).length === 0) {
+        setValidationError("Please update at least one field before saving.");
+        return;
+      }
+      try {
+        await updateConfig.mutateAsync({ id: data.data.id, payload });
+      } catch (err) {
+        setSaveError(err?.response?.data?.message || "Unable to save configuration. Please try again.");
+      }
       return;
     }
 
     const payload = toTrimmedPayload(form);
-    await createConfig.mutateAsync({
-      groupId: groupIdNumber,
-      ...payload,
-    });
+    if (Object.keys(payload).length === 0) {
+      setValidationError("Please enter at least one field before saving.");
+      return;
+    }
+
+    try {
+      await createConfig.mutateAsync({
+        groupId: groupIdNumber,
+        ...payload,
+      });
+    } catch (err) {
+      setSaveError(err?.response?.data?.message || "Unable to save configuration. Please try again.");
+    }
   };
 
   const handleVerify = async () => {
@@ -161,12 +186,33 @@ export default function ProjectConfig() {
   };
 
   const handleBack = () => {
+    if (!hasValidGroupId) {
+      navigate("/app/groups");
+      return;
+    }
+
     if (role === "ADMIN") {
       navigate("/app/admin/project-configs");
     } else {
       navigate(`/app/groups/${groupIdNumber}`);
     }
   };
+
+  if (!hasValidGroupId) {
+    return (
+      <DashboardLayout>
+        <div className="admin-dashboard">
+          <div className="panel" style={{ padding: 40, textAlign: "center" }}>
+            <h2 style={{ color: "#dc2626", marginBottom: 12 }}>Invalid Group</h2>
+            <p style={{ color: "#6b7280", marginBottom: 20 }}>
+              Missing or invalid group id in URL.
+            </p>
+            <button className="primary-button" onClick={() => navigate("/app/groups")}>Back to Groups</button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -267,6 +313,8 @@ export default function ProjectConfig() {
                 <span>Status</span>
                 <span className={`status-pill ${getStateClass(stateLabel)}`}>{stateLabel}</span>
               </div>
+              {validationError && <div className="alert alert-error">{validationError}</div>}
+              {saveError && <div className="alert alert-error">{saveError}</div>}
               <div style={{ display: "flex", gap: 8 }}>
                 <button className="primary-button" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? "Saving..." : "Save Config"}

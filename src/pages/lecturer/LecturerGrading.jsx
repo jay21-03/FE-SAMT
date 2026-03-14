@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import { useGroupProgress } from "../../hooks/useReport";
-import { useGroups, useSemesters, useGroupMembers } from "../../hooks/useUserGroups";
+import { useGroup, useGroups, useSemesters } from "../../hooks/useUserGroups";
 
 export default function LecturerGrading() {
   const [selectedSemester, setSelectedSemester] = useState("");
@@ -11,28 +11,44 @@ export default function LecturerGrading() {
 
   // Fetch semesters
   const { data: semestersData } = useSemesters();
-  const semesters = semestersData?.data?.content || semestersData?.content || semestersData || [];
+  const semesters = Array.isArray(semestersData) ? semestersData : [];
 
   // Fetch groups
   const { data: groupsData, isLoading: groupsLoading } = useGroups({
     page: 0,
     size: 100,
-    semesterId: selectedSemester || undefined,
+    semesterId: selectedSemester ? Number(selectedSemester) : undefined,
   });
-  const groups = groupsData?.data?.content || groupsData?.content || [];
+  const groups = groupsData?.content || [];
+
+  // Auto-select first group when groups load
+  useEffect(() => {
+    if (groups.length > 0 && !selectedGroupId) {
+      setSelectedGroupId(String(groups[0].id));
+    }
+  }, [groups, selectedGroupId]);
 
   // Get active group
-  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : groups[0]?.id || 0;
+  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : (groups[0]?.id || 0);
   const activeGroup = groups.find((g) => g.id === activeGroupId);
 
-  // Fetch group members
-  const { data: membersData, isLoading: membersLoading } = useGroupMembers(activeGroupId);
-  const members = membersData || [];
+  // Fetch detailed group info for members with fullName/email - only if activeGroupId is valid
+  const { data: groupDetail, isLoading: groupLoading } = useGroup(activeGroupId);
+  const members = useMemo(() => {
+    if (!groupDetail?.members) return [];
+    return groupDetail.members.map((member) => ({
+      userId: member.userId,
+      fullName: member.fullName,
+      email: member.email,
+      role: member.role,
+      joinedAt: null,
+    }));
+  }, [groupDetail]);
 
-  // Fetch group progress for context
+  // Fetch group progress for context - only if activeGroupId is valid
   const { data: progress } = useGroupProgress(activeGroupId);
 
-  const isLoading = groupsLoading || membersLoading;
+  const isLoading = groupsLoading || groupLoading;
 
   const columns = [
     {
@@ -129,7 +145,7 @@ export default function LecturerGrading() {
                 <option value="">All Semesters</option>
                 {semesters.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.code || s.semesterCode} {s.active && "(Active)"}
+                    {s.semesterCode} {s.isActive && "(Active)"}
                   </option>
                 ))}
               </select>

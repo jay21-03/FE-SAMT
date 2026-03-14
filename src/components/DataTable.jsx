@@ -1,4 +1,4 @@
-export default function DataTable({ columns, data, loading, emptyMessage = "No data" }) {
+export default function DataTable({ columns, data, loading, emptyMessage = "No data", keyField = "id" }) {
   return (
     <div className="panel">
       <div className="data-table-wrapper">
@@ -24,8 +24,8 @@ export default function DataTable({ columns, data, loading, emptyMessage = "No d
                 </td>
               </tr>
             ) : (
-              data.map((row) => (
-                <tr key={row.id || row.key}>
+              data.map((row, index) => (
+                <tr key={row?.[keyField] ?? row?.id ?? row?.key ?? `row-${index}`}>
                   {columns.map((col) => (
                     <td key={col.key}>
                       {typeof col.render === "function" ? col.render(row) : row[col.key]}

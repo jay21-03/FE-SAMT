@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
@@ -13,23 +13,30 @@ export default function LecturerTasks() {
 
   // Fetch semesters
   const { data: semestersData } = useSemesters();
-  const semesters = semestersData?.data?.content || semestersData?.content || semestersData || [];
+  const semesters = Array.isArray(semestersData) ? semestersData : [];
 
   // Fetch groups
   const { data: groupsData, isLoading: groupsLoading } = useGroups({
     page: 0,
     size: 100,
-    semesterId: selectedSemester || undefined,
+    semesterId: selectedSemester ? Number(selectedSemester) : undefined,
   });
-  const groups = groupsData?.data?.content || groupsData?.content || [];
+  const groups = groupsData?.content || [];
+
+  // Auto-select first group when groups load
+  useEffect(() => {
+    if (groups.length > 0 && !selectedGroupId) {
+      setSelectedGroupId(String(groups[0].id));
+    }
+  }, [groups, selectedGroupId]);
 
   // Get active group
-  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : groups[0]?.id || 0;
+  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : (groups[0]?.id || 0);
 
-  // Fetch group progress for stats
+  // Fetch group progress for stats - only if activeGroupId is valid
   const { data: progress } = useGroupProgress(activeGroupId);
 
-  // Fetch recent activities (which includes Jira issues)
+  // Fetch recent activities (which includes Jira issues) - only if activeGroupId is valid
   const { data: activitiesData, isLoading: activitiesLoading } = useRecentActivities(
     activeGroupId,
     { source: sourceFilter, page, size: 20 }
@@ -212,7 +219,7 @@ export default function LecturerTasks() {
                 <option value="">All Semesters</option>
                 {semesters.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.code || s.semesterCode} {s.active && "(Active)"}
+                    {s.semesterCode} {s.isActive && "(Active)"}
                   </option>
                 ))}
               </select>

@@ -46,10 +46,13 @@ export const authApi = {
 
   async logout(payload?: LogoutRequest): Promise<void> {
     const refreshToken = payload?.refreshToken ?? tokenStore.getRefreshToken()
-    if (refreshToken) {
-      await api.post("/api/auth/logout", { refreshToken })
+    try {
+      if (refreshToken) {
+        await api.post("/api/auth/logout", { refreshToken })
+      }
+    } finally {
+      tokenStore.clear()
     }
-    tokenStore.clear()
   },
 
   async getProfile(): Promise<IdentityUser> {

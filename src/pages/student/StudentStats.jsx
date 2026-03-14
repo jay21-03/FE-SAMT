@@ -19,7 +19,7 @@ export default function StudentStats() {
   const memberships = membershipsData?.groups || [];
 
   // Use selected group or first group
-  const groupId = selectedGroupId ? Number(selectedGroupId) : memberships[0]?.groupId || 0;
+  const groupId = selectedGroupId ? Number(selectedGroupId) : (memberships[0]?.groupId || 0);
 
   // Build query for GitHub stats
   const githubQuery = useMemo(() => {
@@ -29,13 +29,11 @@ export default function StudentStats() {
     return q;
   }, [groupId, dateRange.from, dateRange.to]);
 
-  // Fetch GitHub stats
+  // Fetch GitHub stats - only if groupId is valid
   const { data: githubStats, isLoading: githubLoading } = useStudentGithubStats(githubQuery);
 
-  // Fetch contribution summary
-  const { data: contribution, isLoading: contributionLoading } = useStudentContribution({
-    groupId,
-  });
+  // Fetch contribution summary - only if groupId is valid
+  const { data: contribution, isLoading: contributionLoading } = useStudentContribution({ groupId });
 
   const stats = githubStats || {
     commitCount: 0,

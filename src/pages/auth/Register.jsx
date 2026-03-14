@@ -18,7 +18,8 @@ export default function Register() {
       { label: "Có chữ hoa (A-Z)", valid: /[A-Z]/.test(password) },
       { label: "Có chữ thường (a-z)", valid: /[a-z]/.test(password) },
       { label: "Có số (0-9)", valid: /[0-9]/.test(password) },
-      { label: "Có ký tự đặc biệt (!@#$...)", valid: /[^A-Za-z0-9]/.test(password) },
+      { label: "Có ký tự đặc biệt (@$!%*?&)", valid: /[@$!%*?&]/.test(password) },
+      { label: "Chỉ dùng ký tự cho phép", valid: /^[A-Za-z\d@$!%*?&]*$/.test(password) },
     ];
   }, [password]);
 

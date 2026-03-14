@@ -30,10 +30,8 @@ export default function StudentDashboard() {
   // Fetch student tasks
   const { data: tasksData, isLoading: tasksLoading } = useStudentTasks(tasksQuery);
 
-  // Fetch contribution summary for primary group
-  const { data: contributionData, isLoading: contributionLoading } = useStudentContribution({
-    groupId,
-  });
+  // Fetch contribution summary for primary group - only when groupId is valid
+  const { data: contributionData } = useStudentContribution({ groupId });
 
   const tasks = tasksData?.content || [];
   const totalPages = tasksData?.totalPages || 0;

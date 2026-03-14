@@ -10,10 +10,11 @@ export const useProjectConfig = (id: string) =>
     staleTime: 30_000,
   })
 
-export const useProjectConfigByGroup = (groupId: number) =>
+export const useProjectConfigByGroup = (groupId: number, options?: { enabled?: boolean }) =>
   useQuery({
     queryKey: queryKeys.projectConfigByGroup(groupId),
     queryFn: () => projectConfigApi.getConfigByGroupId(groupId),
+    enabled: (options?.enabled ?? true) && groupId > 0,
     staleTime: 30_000,
   })
 

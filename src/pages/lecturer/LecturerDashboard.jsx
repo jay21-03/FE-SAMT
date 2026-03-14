@@ -1,39 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useLecturerOverview, useGroupProgress, useRecentActivities } from "../../hooks/useReport";
-import { useGroups } from "../../hooks/useUserGroups";
-import { useSemesters } from "../../hooks/useUserGroups";
+import { useProfile } from "../../hooks/useAuth";
+import { useGroups, useSemesters } from "../../hooks/useUserGroups";
 
 export default function LecturerDashboard() {
   const navigate = useNavigate();
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const lecturerId = profile?.id;
 
   // Fetch semesters for filter
-  const { data: semestersData } = useSemesters({ page: 0, size: 50 });
-  const semesters = semestersData?.data?.content || semestersData?.content || [];
+  const { data: semestersData } = useSemesters();
+  const semesters = Array.isArray(semestersData) ? semestersData : [];
 
-  // Fetch lecturer overview
+  // Fetch lecturer overview - only when profile is loaded
   const { data: overview, isLoading: overviewLoading } = useLecturerOverview(
     selectedSemester ? { semesterId: Number(selectedSemester) } : undefined
   );
 
-  // Fetch groups
+  // Fetch groups for the lecturer
   const { data: groupsData, isLoading: groupsLoading } = useGroups({
     page: 0,
     size: 50,
-    semesterId: selectedSemester || undefined,
+    semesterId: selectedSemester ? Number(selectedSemester) : undefined,
   });
-  const groups = groupsData?.data?.content || groupsData?.content || [];
+  const groups = groupsData?.content || [];
 
   // Select first group if none selected
-  const activeGroupId = selectedGroupId || groups[0]?.id;
+  const activeGroupId = selectedGroupId ?? groups[0]?.id ?? null;
 
-  // Fetch group progress for selected group
+  // Auto-select first group when groups load
+  useEffect(() => {
+    if (groups.length > 0 && selectedGroupId === null) {
+      setSelectedGroupId(groups[0].id);
+    }
+  }, [groups, selectedGroupId]);
+
+  // Fetch group progress for selected group - only if activeGroupId is valid
   const { data: progress, isLoading: progressLoading } = useGroupProgress(activeGroupId || 0);
 
-  // Fetch recent activities for selected group
+  // Fetch recent activities for selected group - only if activeGroupId is valid
   const { data: activitiesData, isLoading: activitiesLoading } = useRecentActivities(
     activeGroupId || 0,
     { page: 0, size: 10 }
@@ -41,7 +50,7 @@ export default function LecturerDashboard() {
 
   const activities = activitiesData?.content || [];
 
-  const isLoading = overviewLoading || groupsLoading;
+  const isLoading = profileLoading || overviewLoading || groupsLoading;
 
   const getCompletionPercent = () => {
     if (!progress) return { todo: 33, inProgress: 33, done: 34 };
@@ -78,7 +87,7 @@ export default function LecturerDashboard() {
               <option value="">All Semesters</option>
               {semesters.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.code} {s.active && "(Active)"}
+                  {s.semesterCode} {s.isActive && "(Active)"}
                 </option>
               ))}
             </select>
