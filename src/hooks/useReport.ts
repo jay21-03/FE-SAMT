@@ -23,7 +23,7 @@ export const reportQueryKeys = {
     ["recentActivities", groupId, query] as const,
 };
 
-const retryUnlessForbidden = (failureCount: number, error: any) => {
+export const retryUnlessForbidden = (failureCount: number, error: any) => {
   const status = error?.response?.status;
   if (status === 403) return false;
   return failureCount < 2;
