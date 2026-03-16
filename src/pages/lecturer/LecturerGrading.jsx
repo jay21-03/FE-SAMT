@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
@@ -20,13 +20,6 @@ export default function LecturerGrading() {
     semesterId: selectedSemester ? Number(selectedSemester) : undefined,
   });
   const groups = groupsData?.content || [];
-
-  // Auto-select first group when groups load
-  useEffect(() => {
-    if (groups.length > 0 && !selectedGroupId) {
-      setSelectedGroupId(String(groups[0].id));
-    }
-  }, [groups, selectedGroupId]);
 
   // Get active group
   const activeGroupId = selectedGroupId ? Number(selectedGroupId) : (groups[0]?.id || 0);

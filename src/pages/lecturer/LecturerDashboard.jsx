@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useLecturerOverview, useGroupProgress, useRecentActivities } from "../../hooks/useReport";
@@ -9,8 +9,7 @@ export default function LecturerDashboard() {
   const navigate = useNavigate();
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState(null);
-  const { data: profile, isLoading: profileLoading } = useProfile();
-  const lecturerId = profile?.id;
+  const { isLoading: profileLoading } = useProfile();
 
   // Fetch semesters for filter
   const { data: semestersData } = useSemesters();
@@ -31,13 +30,6 @@ export default function LecturerDashboard() {
 
   // Select first group if none selected
   const activeGroupId = selectedGroupId ?? groups[0]?.id ?? null;
-
-  // Auto-select first group when groups load
-  useEffect(() => {
-    if (groups.length > 0 && selectedGroupId === null) {
-      setSelectedGroupId(groups[0].id);
-    }
-  }, [groups, selectedGroupId]);
 
   // Fetch group progress for selected group - only if activeGroupId is valid
   const { data: progress, isLoading: progressLoading } = useGroupProgress(activeGroupId || 0);
@@ -260,8 +252,11 @@ export default function LecturerDashboard() {
                       </div>
                     </li>
                   ) : (
-                    activities.map((a) => (
-                      <li key={a.activityId} className="activity-item">
+                    activities.map((a, index) => (
+                      <li
+                        key={`${a.activityId ?? a.id ?? index}-${a.occurredAt ?? "na"}`}
+                        className="activity-item"
+                      >
                         <div className="activity-main">
                           <span
                             style={{
