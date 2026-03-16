@@ -4,13 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
+    "dev": "vite --config config/vite.config.js",
+    "build": "vite build --config config/vite.config.js",
+    "lint": "eslint --config config/eslint.config.js . --ignore-pattern coverage/**",
+    "preview": "vite preview --config config/vite.config.js",
     "test:unit": "vitest run --config config/vitest.config.js",
     "test:unit:watch": "vitest --config config/vitest.config.js",
-    "test:unit:coverage": "vitest run --config config/vitest.config.js --coverage"
+    "test:unit:coverage": "vitest run --config config/vitest.config.js --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --workers=1 --reporter=line",
+    "test:auto": "npm run test:unit && npm run test:e2e:ci"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.83.0",
@@ -22,11 +25,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.54.2",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "@vitest/coverage-istanbul": "^2.1.9",
     "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
