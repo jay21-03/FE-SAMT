@@ -57,19 +57,28 @@ describe('Login page', () => {
   })
 
   it('shows error message when login fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     loginMock.mockRejectedValue(new Error('bad credentials'))
 
-    render(<Login />)
+    try {
+      render(<Login />)
 
-    fireEvent.change(screen.getByPlaceholderText('you@samt.edu.vn'), {
-      target: { value: 'student@samt.edu.vn' },
-    })
-    fireEvent.change(screen.getByPlaceholderText('••••••••'), {
-      target: { value: 'wrong' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }))
+      fireEvent.change(screen.getByPlaceholderText('you@samt.edu.vn'), {
+        target: { value: 'student@samt.edu.vn' },
+      })
+      fireEvent.change(screen.getByPlaceholderText('••••••••'), {
+        target: { value: 'wrong' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }))
 
-    expect(await screen.findByText('Đăng nhập thất bại. Vui lòng kiểm tra email hoặc mật khẩu.')).toBeInTheDocument()
+      expect(await screen.findByText('Đăng nhập thất bại. Vui lòng kiểm tra email hoặc mật khẩu.')).toBeInTheDocument()
+      expect(consoleErrorSpy).toHaveBeenCalled()
+    }
+    finally {
+      consoleErrorSpy.mockRestore()
+      consoleWarnSpy.mockRestore()
+    }
   })
 
   it('navigates to register page from footer link', () => {

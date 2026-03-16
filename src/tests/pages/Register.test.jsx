@@ -62,15 +62,24 @@ describe('Register page', () => {
   })
 
   it('shows conflict error when email already exists', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     registerMock.mockRejectedValue({ response: { status: 409 } })
-    render(<Register />)
+    try {
+      render(<Register />)
 
-    fireEvent.change(screen.getByPlaceholderText('Nguyen Van A'), { target: { value: 'QA User' } })
-    fireEvent.change(screen.getByPlaceholderText('you@samt.edu.vn'), { target: { value: 'qa@edu.vn' } })
-    fireEvent.change(screen.getAllByPlaceholderText('••••••••')[0], { target: { value: 'Password1!' } })
-    fireEvent.change(screen.getAllByPlaceholderText('••••••••')[1], { target: { value: 'Password1!' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng ký tài khoản' }))
+      fireEvent.change(screen.getByPlaceholderText('Nguyen Van A'), { target: { value: 'QA User' } })
+      fireEvent.change(screen.getByPlaceholderText('you@samt.edu.vn'), { target: { value: 'qa@edu.vn' } })
+      fireEvent.change(screen.getAllByPlaceholderText('••••••••')[0], { target: { value: 'Password1!' } })
+      fireEvent.change(screen.getAllByPlaceholderText('••••••••')[1], { target: { value: 'Password1!' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Đăng ký tài khoản' }))
 
-    expect(await screen.findByText('Email này đã được đăng ký. Vui lòng sử dụng email khác.')).toBeInTheDocument()
+      expect(await screen.findByText('Email này đã được đăng ký. Vui lòng sử dụng email khác.')).toBeInTheDocument()
+      expect(consoleErrorSpy).toHaveBeenCalled()
+    }
+    finally {
+      consoleErrorSpy.mockRestore()
+      consoleWarnSpy.mockRestore()
+    }
   })
 })

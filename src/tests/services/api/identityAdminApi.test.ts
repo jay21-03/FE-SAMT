@@ -59,6 +59,17 @@ describe('identityAdminApi', () => {
     expect(updated).toEqual({ linked: true })
   })
 
+  it('locks user without optional reason param', async () => {
+    postMock.mockResolvedValue({ data: { success: true } })
+
+    const locked = await identityAdminApi.lockUser(8)
+
+    expect(postMock).toHaveBeenCalledWith('/api/admin/users/8/lock', undefined, {
+      params: undefined,
+    })
+    expect(locked).toEqual({ success: true })
+  })
+
   it('fetches audit endpoints', async () => {
     getMock.mockResolvedValue({ data: { content: [] } })
 

@@ -59,6 +59,28 @@ describe('reportApi', () => {
     createObjectURLSpy.mockRestore()
   })
 
+  it('uses default file name when content-disposition header is missing', async () => {
+    if (typeof window.URL.createObjectURL !== 'function') {
+      Object.defineProperty(window.URL, 'createObjectURL', {
+        value: vi.fn(),
+        configurable: true,
+      })
+    }
+    const createObjectURLSpy = vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('blob:fallback-url')
+
+    getMock.mockResolvedValue({
+      data: new Uint8Array([4, 5, 6]),
+      headers: {},
+    })
+
+    const result = await reportApi.downloadReport('r-9')
+
+    expect(getMock).toHaveBeenCalledWith('/api/reports/r-9/download', { responseType: 'blob' })
+    expect(result).toEqual({ url: 'blob:fallback-url', fileName: 'report_r-9.docx' })
+
+    createObjectURLSpy.mockRestore()
+  })
+
   it('fetches student and lecturer report-related endpoints', async () => {
     getMock.mockResolvedValue({ data: { data: { content: [] } } })
 

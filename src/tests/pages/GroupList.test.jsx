@@ -170,22 +170,31 @@ describe('GroupList page', () => {
   })
 
   it('shows conflict message when API returns 409', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     createGroupMock.mockRejectedValue({ response: { status: 409 } })
-    const { container } = renderPage()
+    try {
+      const { container } = renderPage()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create Group' }))
-    fireEvent.change(screen.getByPlaceholderText('SE1705-G1'), {
-      target: { value: 'SE1705-G1' },
-    })
+      fireEvent.click(screen.getByRole('button', { name: 'Create Group' }))
+      fireEvent.change(screen.getByPlaceholderText('SE1705-G1'), {
+        target: { value: 'SE1705-G1' },
+      })
 
-    const modalForm = container.querySelector('.modal-form')
-    const modalSelects = modalForm.querySelectorAll('select')
-    fireEvent.change(modalSelects[0], { target: { value: '11' } })
-    fireEvent.change(modalSelects[1], { target: { value: '5' } })
+      const modalForm = container.querySelector('.modal-form')
+      const modalSelects = modalForm.querySelectorAll('select')
+      fireEvent.change(modalSelects[0], { target: { value: '11' } })
+      fireEvent.change(modalSelects[1], { target: { value: '5' } })
 
-    const submitButton = container.querySelector('.modal-form button[type="submit"]')
-    fireEvent.click(submitButton)
+      const submitButton = container.querySelector('.modal-form button[type="submit"]')
+      fireEvent.click(submitButton)
 
-    expect(await screen.findByText('Group name already exists in this semester.')).toBeInTheDocument()
+      expect(await screen.findByText('Group name already exists in this semester.')).toBeInTheDocument()
+      expect(consoleErrorSpy).toHaveBeenCalled()
+    }
+    finally {
+      consoleErrorSpy.mockRestore()
+      consoleWarnSpy.mockRestore()
+    }
   })
 })

@@ -55,12 +55,30 @@ describe('useAuth hooks', () => {
     expect(result.current.data).toEqual({ id: 1, fullName: 'QA' })
   })
 
+  it('exposes profile query error state', async () => {
+    getProfileMock.mockRejectedValue(new Error('profile failed'))
+
+    const { result } = renderHook(() => useProfile(), { wrapper: wrapperFactory() })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error).toBeInstanceOf(Error)
+  })
+
   it('calls login mutation', async () => {
     loginMock.mockResolvedValue({ accessToken: 'a' })
     const { result } = renderHook(() => useLogin(), { wrapper: wrapperFactory() })
 
     await result.current.mutateAsync({ email: 'qa@example.com', password: 'x' })
     expect(loginMock).toHaveBeenCalledWith({ email: 'qa@example.com', password: 'x' })
+  })
+
+  it('propagates login mutation errors', async () => {
+    loginMock.mockRejectedValue(new Error('login failed'))
+    const { result } = renderHook(() => useLogin(), { wrapper: wrapperFactory() })
+
+    await expect(result.current.mutateAsync({ email: 'qa@example.com', password: 'bad' })).rejects.toThrow(
+      'login failed',
+    )
   })
 
   it('calls register mutation', async () => {
@@ -85,5 +103,24 @@ describe('useAuth hooks', () => {
 
     await result.current.mutateAsync({ fullName: 'New QA', email: 'new@qa.com' })
     expect(updateProfileMock).toHaveBeenCalledWith({ fullName: 'New QA', email: 'new@qa.com' })
+  })
+
+  it('invalidates auth session query after update profile success', async () => {
+    updateProfileMock.mockResolvedValue({ id: 1, fullName: 'Updated' })
+    getProfileMock.mockResolvedValue({ id: 1, fullName: 'Original' })
+    const { result } = renderHook(() => useUpdateProfile(), { wrapper: wrapperFactory() })
+
+    await result.current.mutateAsync({ fullName: 'Updated', email: 'updated@samt.local' })
+
+    expect(updateProfileMock).toHaveBeenCalledWith({ fullName: 'Updated', email: 'updated@samt.local' })
+  })
+
+  it('propagates update profile mutation errors', async () => {
+    updateProfileMock.mockRejectedValue(new Error('update failed'))
+    const { result } = renderHook(() => useUpdateProfile(), { wrapper: wrapperFactory() })
+
+    await expect(
+      result.current.mutateAsync({ fullName: 'Broken', email: 'broken@samt.local' }),
+    ).rejects.toThrow('update failed')
   })
 })

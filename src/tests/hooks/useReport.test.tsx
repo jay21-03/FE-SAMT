@@ -3,21 +3,37 @@ import { renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  retryUnlessForbidden,
   useDownloadReport,
   useGenerateReport,
   useGroupProgress,
+  useLecturerOverview,
   useRecentActivities,
   useReport,
   useReports,
+  useStudentContribution,
   useStudentGithubStats,
   useStudentTasks,
 } from '../../hooks/useReport'
 
-const { getReportMock, listReportsMock, getStudentTasksMock, getStudentGithubStatsMock, getGroupProgressMock, getRecentActivitiesMock, generateSrsReportMock, downloadReportMock } = vi.hoisted(() => ({
+const {
+  getReportMock,
+  listReportsMock,
+  getStudentTasksMock,
+  getStudentGithubStatsMock,
+  getStudentContributionSummaryMock,
+  getLecturerOverviewMock,
+  getGroupProgressMock,
+  getRecentActivitiesMock,
+  generateSrsReportMock,
+  downloadReportMock,
+} = vi.hoisted(() => ({
   getReportMock: vi.fn(),
   listReportsMock: vi.fn(),
   getStudentTasksMock: vi.fn(),
   getStudentGithubStatsMock: vi.fn(),
+  getStudentContributionSummaryMock: vi.fn(),
+  getLecturerOverviewMock: vi.fn(),
   getGroupProgressMock: vi.fn(),
   getRecentActivitiesMock: vi.fn(),
   generateSrsReportMock: vi.fn(),
@@ -30,6 +46,8 @@ vi.mock('../../api/reportApi.ts', () => ({
     listReports: listReportsMock,
     getStudentTasks: getStudentTasksMock,
     getStudentGithubStats: getStudentGithubStatsMock,
+    getStudentContributionSummary: getStudentContributionSummaryMock,
+    getLecturerOverview: getLecturerOverviewMock,
     getGroupProgress: getGroupProgressMock,
     getRecentActivities: getRecentActivitiesMock,
     generateSrsReport: generateSrsReportMock,
@@ -55,10 +73,18 @@ describe('useReport', () => {
     listReportsMock.mockReset()
     getStudentTasksMock.mockReset()
     getStudentGithubStatsMock.mockReset()
+    getStudentContributionSummaryMock.mockReset()
+    getLecturerOverviewMock.mockReset()
     getGroupProgressMock.mockReset()
     getRecentActivitiesMock.mockReset()
     generateSrsReportMock.mockReset()
     downloadReportMock.mockReset()
+  })
+
+  it('applies retry predicate rules for forbidden and transient errors', () => {
+    expect(retryUnlessForbidden(0, { response: { status: 403 } })).toBe(false)
+    expect(retryUnlessForbidden(0, { response: { status: 500 } })).toBe(true)
+    expect(retryUnlessForbidden(2, { response: { status: 500 } })).toBe(false)
   })
 
   it('does not call API when reportId is empty (enabled guard)', async () => {
@@ -145,6 +171,37 @@ describe('useReport', () => {
     expect(getStudentGithubStatsMock).not.toHaveBeenCalled()
   })
 
+  it('fetches student github stats and contribution when group id is valid', async () => {
+    getStudentGithubStatsMock.mockResolvedValue({ commitCount: 12 })
+    getStudentContributionSummaryMock.mockResolvedValue({ totalPoints: 88 })
+
+    const githubStatsHook = renderHook(
+      () => useStudentGithubStats({ groupId: 3, from: '2026-01-01', to: '2026-01-31' }),
+      { wrapper: wrapperFactory() },
+    )
+    const contributionHook = renderHook(
+      () => useStudentContribution({ groupId: 3, from: '2026-01-01', to: '2026-01-31' }),
+      { wrapper: wrapperFactory() },
+    )
+
+    await waitFor(() => expect(githubStatsHook.result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(contributionHook.result.current.isSuccess).toBe(true))
+
+    expect(getStudentGithubStatsMock).toHaveBeenCalledWith({ groupId: 3, from: '2026-01-01', to: '2026-01-31' })
+    expect(getStudentContributionSummaryMock).toHaveBeenCalledWith({ groupId: 3, from: '2026-01-01', to: '2026-01-31' })
+  })
+
+  it('fetches lecturer overview metrics', async () => {
+    getLecturerOverviewMock.mockResolvedValue({ totalGroups: 4 })
+
+    const { result } = renderHook(() => useLecturerOverview({ from: '2026-01-01' }), {
+      wrapper: wrapperFactory(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(getLecturerOverviewMock).toHaveBeenCalledWith({ from: '2026-01-01' })
+  })
+
   it('fetches group progress when group id is valid', async () => {
     getGroupProgressMock.mockResolvedValue({ completionRate: 80 })
 
@@ -166,6 +223,17 @@ describe('useReport', () => {
     expect(getGroupProgressMock).not.toHaveBeenCalled()
   })
 
+  it('does not retry group progress when backend returns forbidden', async () => {
+    getGroupProgressMock.mockRejectedValue({ response: { status: 403 } })
+
+    const forbiddenErrorHook = renderHook(() => useGroupProgress(10, { from: '2026-01-01' }), {
+      wrapper: wrapperFactory(),
+    })
+
+    await waitFor(() => expect(forbiddenErrorHook.result.current.isError).toBe(true))
+    expect(getGroupProgressMock).toHaveBeenCalledTimes(1)
+  })
+
   it('fetches recent activities with valid group id', async () => {
     getRecentActivitiesMock.mockResolvedValue({ content: [{ id: 1, action: 'SYNC' }] })
 
@@ -176,6 +244,24 @@ describe('useReport', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(getRecentActivitiesMock).toHaveBeenCalledWith(4, { page: 0, size: 5 })
     expect(result.current.data?.content).toEqual([{ id: 1, action: 'SYNC' }])
+  })
+
+  it('does not fetch recent activities for invalid group id and does not retry 403', async () => {
+    const disabledHook = renderHook(() => useRecentActivities(0, { page: 0, size: 5 }), {
+      wrapper: wrapperFactory(),
+    })
+
+    await waitFor(() => expect(disabledHook.result.current.fetchStatus).toBe('idle'))
+    expect(getRecentActivitiesMock).not.toHaveBeenCalled()
+
+    getRecentActivitiesMock.mockRejectedValue({ response: { status: 403 } })
+
+    const forbiddenHook = renderHook(() => useRecentActivities(8, { page: 0, size: 5 }), {
+      wrapper: wrapperFactory(),
+    })
+
+    await waitFor(() => expect(forbiddenHook.result.current.isError).toBe(true))
+    expect(getRecentActivitiesMock).toHaveBeenCalledTimes(1)
   })
 
   it('invalidates reports query on generate report success', async () => {
@@ -216,6 +302,29 @@ describe('useReport', () => {
 
     appendChildSpy.mockRestore()
     removeChildSpy.mockRestore()
+    clickSpy.mockRestore()
+    revokeSpy.mockRestore()
+  })
+
+  it('uses fallback filename when download response has no content-disposition', async () => {
+    downloadReportMock.mockResolvedValue({ url: 'blob:fallback', fileName: 'report_report-9.docx' })
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    if (typeof window.URL.revokeObjectURL !== 'function') {
+      Object.defineProperty(window.URL, 'revokeObjectURL', {
+        value: vi.fn(),
+        configurable: true,
+      })
+    }
+    const revokeSpy = vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => undefined)
+
+    const { result } = renderHook(() => useDownloadReport(), {
+      wrapper: wrapperFactory(),
+    })
+
+    await result.current.mutateAsync('report-9')
+
+    expect(downloadReportMock).toHaveBeenCalledWith('report-9')
+
     clickSpy.mockRestore()
     revokeSpy.mockRestore()
   })
