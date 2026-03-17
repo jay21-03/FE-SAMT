@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useReports, useGenerateReport, useDownloadReport } from "../../hooks/useReport";
-import { useGroups } from "../../hooks/useUserGroups";
+import { useGroups, useUserGroups } from "../../hooks/useUserGroups";
 import { useProjectConfigByGroup } from "../../hooks/useProjectConfigs";
+import { useProfile } from "../../hooks/useAuth";
 
 export default function Reports() {
   const [page, setPage] = useState(0);
@@ -26,18 +27,29 @@ export default function Reports() {
   const { data: processingReportsData } = useReports({ page: 0, size: 1, status: "PROCESSING" });
   const { data: pendingReportsData } = useReports({ page: 0, size: 1, status: "PENDING" });
   const { data: failedReportsData } = useReports({ page: 0, size: 1, status: "FAILED" });
-  const { data: groupsData } = useGroups({ page: 0, size: 100 });
+  const { data: profile } = useProfile();
+  const currentUserId = Number(profile?.id || 0);
+  const currentRole = String(profile?.role || profile?.roles?.[0] || "").toUpperCase();
+  const isOwnGroupOnlyRole = currentRole === "STUDENT" || currentRole === "LECTURER";
+  const { data: groupsData } = useGroups(
+    { page: 0, size: 100 },
+    { enabled: !isOwnGroupOnlyRole }
+  );
+  const { data: userGroupsData } = useUserGroups(currentUserId);
   const { data: configData } = useProjectConfigByGroup(
     selectedGroupId ? Number(selectedGroupId) : 0
   );
 
   const generateReport = useGenerateReport();
   const downloadReport = useDownloadReport();
+  const selectedConfig = configData?.data ?? configData ?? null;
 
   const reports = data?.content || [];
   const totalPages = data?.totalPages || 0;
   const totalElements = data?.totalElements || 0;
-  const groups = groupsData?.data?.content || groupsData?.content || [];
+  const allGroups = groupsData?.data?.content || groupsData?.content || [];
+  const ownGroups = userGroupsData?.groups || [];
+  const groups = isOwnGroupOnlyRole ? ownGroups : allGroups;
 
   const completedCount = completedReportsData?.totalElements ?? 0;
   const processingCount =
@@ -46,7 +58,7 @@ export default function Reports() {
   const totalReportsCount = totalReportsData?.totalElements ?? 0;
 
   const handleGenerate = async () => {
-    if (!configData?.data?.id) {
+    if (!selectedConfig?.id) {
       setErrorMessage("Selected group does not have a project configuration.");
       return;
     }
@@ -54,7 +66,7 @@ export default function Reports() {
     setErrorMessage(null);
     try {
       await generateReport.mutateAsync({
-        projectConfigId: configData.data.id,
+        projectConfigId: String(selectedConfig.id),
         useAi,
         exportType,
       });
@@ -363,33 +375,34 @@ export default function Reports() {
                 className="reports-select"
               >
                 <option value="">Choose a group...</option>
+                {groups.length === 0 && <option value="" disabled>No assigned groups</option>}
                 {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
+                  <option key={group.groupId} value={group.groupId}>
                     {group.groupName} ({group.semesterCode})
                   </option>
                 ))}
               </select>
             </label>
 
-            {selectedGroupId && configData?.data?.id && (
-              <div className={`reports-config-box ${configData.data.state === "VERIFIED" ? "verified" : "warning"}`}>
+            {selectedGroupId && selectedConfig?.id && (
+              <div className={`reports-config-box ${selectedConfig.state === "VERIFIED" ? "verified" : "warning"}`}>
                 <div className="reports-config-row">
                   <div>
                     <div className="reports-config-label">
                       Project Configuration
                     </div>
                     <div className="reports-config-id">
-                      {String(configData.data.id).substring(0, 12)}...
+                      {String(selectedConfig.id).substring(0, 12)}...
                     </div>
                   </div>
-                  <span className={`reports-config-state ${configData.data.state === "VERIFIED" ? "verified" : "warning"}`}>
-                    {configData.data.state}
+                  <span className={`reports-config-state ${selectedConfig.state === "VERIFIED" ? "verified" : "warning"}`}>
+                    {selectedConfig.state}
                   </span>
                 </div>
               </div>
             )}
 
-            {selectedGroupId && !configData?.data?.id && (
+            {selectedGroupId && !selectedConfig?.id && (
               <div className="reports-config-box error">
                 ⚠️ This group does not have a project configuration. Please configure it first.
               </div>
@@ -437,8 +450,8 @@ export default function Reports() {
                 onClick={handleGenerate}
                 disabled={
                   !selectedGroupId ||
-                  !configData?.data?.id ||
-                  configData?.data?.state !== "VERIFIED" ||
+                  !selectedConfig?.id ||
+                  selectedConfig?.state !== "VERIFIED" ||
                   generateReport.isPending
                 }
               >

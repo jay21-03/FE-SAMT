@@ -1,6 +1,7 @@
 import type { AuthTokens, LoginRequest, LogoutRequest, RegisterRequest } from "../types/auth"
 import type { IdentityUser, ProfileEnvelope, UpdateProfileRequest } from "../types/identity"
 import { api } from "./apiClient"
+import { unwrapApiData } from "./response"
 import { tokenStore } from "./tokenStore"
 
 export interface RegisterResponse {
@@ -18,8 +19,7 @@ export interface RegisterResponse {
 }
 
 function unwrapAuthTokens(payload: any): AuthTokens {
-  const authData = payload && payload.data ? payload.data : payload
-  return authData as AuthTokens
+  return unwrapApiData<AuthTokens>(payload)
 }
 
 export const authApi = {
@@ -31,8 +31,8 @@ export const authApi = {
   },
 
   async register(payload: RegisterRequest): Promise<RegisterResponse> {
-    const { data } = await api.post<RegisterResponse>("/api/auth/register", payload)
-    return data
+    const { data } = await api.post<unknown>("/api/auth/register", payload)
+    return unwrapApiData<RegisterResponse>(data)
   },
 
   async refresh(): Promise<AuthTokens> {
@@ -57,11 +57,11 @@ export const authApi = {
 
   async getProfile(): Promise<IdentityUser> {
     const { data } = await api.get<ProfileEnvelope>("/api/users/me")
-    return data.data
+    return unwrapApiData<IdentityUser>(data)
   },
 
   async updateProfile(payload: UpdateProfileRequest): Promise<IdentityUser> {
     const { data } = await api.put<ProfileEnvelope>("/api/users/me", payload)
-    return data.data
+    return unwrapApiData<IdentityUser>(data)
   },
 }

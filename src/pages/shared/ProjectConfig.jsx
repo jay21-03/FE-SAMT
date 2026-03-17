@@ -8,7 +8,7 @@ import {
   useVerifyProjectConfig,
 } from "../../hooks/useProjectConfigs";
 import { useProfile } from "../../hooks/useAuth";
-import { useGroup } from "../../hooks/useUserGroups";
+import { useGroup, useUserGroups } from "../../hooks/useUserGroups";
 import { useSyncJira, useSyncGithub, useSyncAll, useSyncJobs } from "../../hooks/useSync";
 
 export default function ProjectConfig() {
@@ -19,9 +19,13 @@ export default function ProjectConfig() {
   const groupIdNumber = hasValidGroupId ? parsedGroupId : 0;
   const { data: profile } = useProfile();
   const role = profile?.role || profile?.roles?.[0] || null;
+  const isAdmin = role === "ADMIN";
+  const currentUserId = Number(profile?.id || 0);
 
   const { data, isLoading } = useProjectConfigByGroup(groupIdNumber, { enabled: hasValidGroupId });
+  const config = data?.data ?? data ?? null;
   const { data: group } = useGroup(groupIdNumber);
+  const { data: membershipsData, isLoading: membershipsLoading } = useUserGroups(currentUserId);
   const createConfig = useCreateProjectConfig();
   const updateConfig = useUpdateProjectConfig();
   const verifyConfig = useVerifyProjectConfig();
@@ -32,7 +36,12 @@ export default function ProjectConfig() {
   const syncAll = useSyncAll();
 
   // Get project config ID for sync
-  const projectConfigId = data?.data?.id;
+  const projectConfigId = config?.id;
+  const hasGroupAccess = useMemo(() => {
+    if (isAdmin) return true;
+    const groups = membershipsData?.groups || [];
+    return groups.some((g) => g.groupId === groupIdNumber);
+  }, [groupIdNumber, isAdmin, membershipsData]);
 
   // Fetch sync jobs for this project config
   const { data: syncJobsData, refetch: refetchSyncJobs } = useSyncJobs(
@@ -55,18 +64,18 @@ export default function ProjectConfig() {
 
   const form = useMemo(() => {
     return {
-      jiraHostUrl: overrides.jiraHostUrl ?? data?.data?.jiraHostUrl ?? "",
-      jiraEmail: overrides.jiraEmail ?? data?.data?.jiraEmail ?? "",
-      jiraApiToken: overrides.jiraApiToken ?? data?.data?.jiraApiToken ?? "",
-      githubRepoUrl: overrides.githubRepoUrl ?? data?.data?.githubRepoUrl ?? "",
-      githubToken: overrides.githubToken ?? data?.data?.githubToken ?? "",
+      jiraHostUrl: overrides.jiraHostUrl ?? config?.jiraHostUrl ?? "",
+      jiraEmail: overrides.jiraEmail ?? config?.jiraEmail ?? "",
+      jiraApiToken: overrides.jiraApiToken ?? config?.jiraApiToken ?? "",
+      githubRepoUrl: overrides.githubRepoUrl ?? config?.githubRepoUrl ?? "",
+      githubToken: overrides.githubToken ?? config?.githubToken ?? "",
     };
   }, [
-    data?.data?.githubRepoUrl,
-    data?.data?.githubToken,
-    data?.data?.jiraEmail,
-    data?.data?.jiraApiToken,
-    data?.data?.jiraHostUrl,
+    config?.githubRepoUrl,
+    config?.githubToken,
+    config?.jiraEmail,
+    config?.jiraApiToken,
+    config?.jiraHostUrl,
     overrides.githubRepoUrl,
     overrides.githubToken,
     overrides.jiraEmail,
@@ -94,14 +103,14 @@ export default function ProjectConfig() {
     setValidationError(null);
     setSaveError(null);
 
-    if (data?.data?.id) {
+    if (config?.id) {
       const payload = toTrimmedPayload(overrides);
       if (Object.keys(payload).length === 0) {
         setValidationError("Please update at least one field before saving.");
         return;
       }
       try {
-        await updateConfig.mutateAsync({ id: data.data.id, payload });
+        await updateConfig.mutateAsync({ id: config.id, payload });
       } catch (err) {
         setSaveError(err?.response?.data?.message || "Unable to save configuration. Please try again.");
       }
@@ -125,8 +134,8 @@ export default function ProjectConfig() {
   };
 
   const handleVerify = async () => {
-    if (!data?.data?.id) return;
-    await verifyConfig.mutateAsync(data.data.id);
+    if (!config?.id) return;
+    await verifyConfig.mutateAsync(config.id);
   };
 
   // Sync handlers
@@ -176,7 +185,7 @@ export default function ProjectConfig() {
 
   const isSyncing = syncJira.isPending || syncGithub.isPending || syncAll.isPending;
 
-  const stateLabel = data?.data?.state ?? "DRAFT";
+  const stateLabel = config?.state ?? "DRAFT";
   const isSaving = createConfig.isPending || updateConfig.isPending;
   
   const getStateClass = (state) => {
@@ -210,6 +219,32 @@ export default function ProjectConfig() {
               Missing or invalid group id in URL.
             </p>
             <button className="primary-button" onClick={() => navigate("/app/groups")}>Back to Groups</button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!isAdmin && membershipsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="admin-dashboard">
+          <div className="panel panel-center-lg">
+            <p>Checking access...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!hasGroupAccess) {
+    return (
+      <DashboardLayout>
+        <div className="admin-dashboard">
+          <div className="panel panel-center-lg">
+            <h2 className="project-config-invalid-title">Access Denied</h2>
+            <p className="project-config-invalid-text">You can only access configuration of your own groups.</p>
+            <button className="primary-button" onClick={() => navigate("/app/groups")}>Back to My Groups</button>
           </div>
         </div>
       </DashboardLayout>
@@ -324,7 +359,7 @@ export default function ProjectConfig() {
                 <button
                   className="primary-button secondary"
                   onClick={handleVerify}
-                  disabled={!data?.data?.id || verifyConfig.isPending}
+                  disabled={!config?.id || verifyConfig.isPending}
                 >
                   {verifyConfig.isPending ? "Verifying..." : "Verify Connection"}
                 </button>

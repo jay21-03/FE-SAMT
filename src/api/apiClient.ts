@@ -7,6 +7,7 @@ import axios, {
 } from "axios"
 import { env } from "../config/env"
 import type { AuthTokens, RefreshTokenRequest } from "../types/auth"
+import { unwrapApiData } from "./response"
 import { tokenStore } from "./tokenStore"
 
 type RetryableConfig = AxiosRequestConfig & { _retry?: boolean }
@@ -35,8 +36,7 @@ function withBearer(token: string): string {
 }
 
 function unwrapAuthTokens(payload: any): AuthTokens {
-  const authData = payload && payload.data ? payload.data : payload
-  return authData as AuthTokens
+  return unwrapApiData<AuthTokens>(payload)
 }
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {

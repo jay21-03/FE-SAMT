@@ -6,6 +6,7 @@ import GroupList from '../../pages/shared/GroupList'
 const {
   invalidateQueriesMock,
   useGroupsMock,
+  useUserGroupsMock,
   useSemestersMock,
   useUsersMock,
   useProfileMock,
@@ -14,6 +15,7 @@ const {
 } = vi.hoisted(() => ({
   invalidateQueriesMock: vi.fn(),
   useGroupsMock: vi.fn(),
+  useUserGroupsMock: vi.fn(),
   useSemestersMock: vi.fn(),
   useUsersMock: vi.fn(),
   useProfileMock: vi.fn(),
@@ -33,6 +35,7 @@ vi.mock('../../layout/DashboardLayout', () => ({
 
 vi.mock('../../hooks/useUserGroups', () => ({
   useGroups: (query) => useGroupsMock(query),
+  useUserGroups: (userId) => useUserGroupsMock(userId),
   useSemesters: () => useSemestersMock(),
   useUsers: (query) => useUsersMock(query),
 }))
@@ -70,6 +73,7 @@ describe('GroupList page', () => {
 
     invalidateQueriesMock.mockReset()
     useGroupsMock.mockReset()
+    useUserGroupsMock.mockReset()
     useSemestersMock.mockReset()
     useUsersMock.mockReset()
     useProfileMock.mockReset()
@@ -77,7 +81,7 @@ describe('GroupList page', () => {
     refetchMock.mockReset()
 
     useProfileMock.mockReturnValue({
-      data: { role: 'ADMIN' },
+      data: { id: 1, role: 'ADMIN' },
       isLoading: false,
     })
 
@@ -99,6 +103,11 @@ describe('GroupList page', () => {
 
     useSemestersMock.mockReturnValue({
       data: [{ id: 11, semesterCode: 'SU26', semesterName: 'Summer 2026' }],
+    })
+
+    useUserGroupsMock.mockReturnValue({
+      data: { groups: [] },
+      isLoading: false,
     })
 
     useUsersMock.mockReturnValue({

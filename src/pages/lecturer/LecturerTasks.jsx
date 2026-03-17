@@ -1,27 +1,37 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import { useRecentActivities, useGroupProgress } from "../../hooks/useReport";
-import { useGroups, useSemesters } from "../../hooks/useUserGroups";
+import { useProfile } from "../../hooks/useAuth";
+import { useSemesters, useUserGroups } from "../../hooks/useUserGroups";
 
 export default function LecturerTasks() {
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [sourceFilter, setSourceFilter] = useState("ALL");
   const [page, setPage] = useState(0);
+  const { data: profile } = useProfile();
+  const currentUserId = Number(profile?.id || 0);
 
   // Fetch semesters
   const { data: semestersData } = useSemesters();
   const semesters = Array.isArray(semestersData) ? semestersData : [];
 
-  // Fetch groups
-  const { data: groupsData, isLoading: groupsLoading } = useGroups({
-    page: 0,
-    size: 100,
-    semesterId: selectedSemester ? Number(selectedSemester) : undefined,
-  });
-  const groups = groupsData?.content || [];
+  // Fetch own groups for lecturer only
+  const { data: userGroupsData, isLoading: groupsLoading } = useUserGroups(currentUserId);
+  const groups = useMemo(() => {
+    const memberships = userGroupsData?.groups || [];
+    const semesterId = selectedSemester ? Number(selectedSemester) : undefined;
+    const filtered = semesterId
+      ? memberships.filter((group) => group.semesterId === semesterId)
+      : memberships;
+
+    return filtered.map((group) => ({
+      id: group.groupId,
+      groupName: group.groupName,
+    }));
+  }, [selectedSemester, userGroupsData]);
 
   // Get active group
   const activeGroupId = selectedGroupId ? Number(selectedGroupId) : (groups[0]?.id || 0);
@@ -133,9 +143,6 @@ export default function LecturerTasks() {
           </Link>
           <Link className="tab" to="/app/lecturer/github-stats">
             GitHub Stats
-          </Link>
-          <Link className="tab" to="/app/lecturer/grading">
-            Grading
           </Link>
         </div>
 

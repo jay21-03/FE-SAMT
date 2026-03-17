@@ -9,7 +9,6 @@ const {
   useUserGroupsMock,
   useGroupsMock,
   useProfileMock,
-  getAccessTokenUserIdMock,
   useProjectConfigByGroupMock,
   refetchReportsMock,
   generateMutateAsyncMock,
@@ -21,7 +20,6 @@ const {
   useUserGroupsMock: vi.fn(),
   useGroupsMock: vi.fn(),
   useProfileMock: vi.fn(),
-  getAccessTokenUserIdMock: vi.fn(),
   useProjectConfigByGroupMock: vi.fn(),
   refetchReportsMock: vi.fn(),
   generateMutateAsyncMock: vi.fn(),
@@ -47,10 +45,6 @@ vi.mock('../../hooks/useAuth', () => ({
   useProfile: () => useProfileMock(),
 }))
 
-vi.mock('../../utils/authToken', () => ({
-  getAccessTokenUserId: () => getAccessTokenUserIdMock(),
-}))
-
 vi.mock('../../hooks/useProjectConfigs', () => ({
   useProjectConfigByGroup: (groupId) => useProjectConfigByGroupMock(groupId),
 }))
@@ -71,7 +65,6 @@ describe('Reports page', () => {
     useUserGroupsMock.mockReset()
     useGroupsMock.mockReset()
     useProfileMock.mockReset()
-    getAccessTokenUserIdMock.mockReset()
     useProjectConfigByGroupMock.mockReset()
     refetchReportsMock.mockReset()
     generateMutateAsyncMock.mockReset()
@@ -86,10 +79,8 @@ describe('Reports page', () => {
       data: { id: 99, role: 'LECTURER' },
     })
 
-    getAccessTokenUserIdMock.mockReturnValue(99)
-
     useGroupsMock.mockReturnValue({
-      data: { content: [{ id: 10, groupName: 'SE1705-G1', semesterCode: 'SU26' }] },
+      data: { content: [{ id: 88, groupName: 'OTHER-GROUP', semesterCode: 'FA26' }] },
     })
 
     useUserGroupsMock.mockReturnValue({
@@ -179,10 +170,7 @@ describe('Reports page', () => {
 
     expect(await screen.findByText('Report generation started! It will appear in the list shortly.')).toBeInTheDocument()
     expect(refetchReportsMock).toHaveBeenCalled()
-    expect(useGroupsMock).toHaveBeenCalledWith(
-      { page: 0, size: 100, lecturerId: 99 },
-      { enabled: true }
-    )
+    expect(useUserGroupsMock).toHaveBeenCalledWith(99)
   })
 
   it('shows download error when download fails', async () => {

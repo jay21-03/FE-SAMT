@@ -1,4 +1,5 @@
 import { api } from "./apiClient";
+import { unwrapApiData } from "./response";
 import type {
   GenerateReportRequest,
   ReportsQuery,
@@ -41,7 +42,7 @@ export const reportApi = {
    */
   async generateSrsReport(request: GenerateReportRequest): Promise<ReportResponse> {
     const { data } = await api.post<ApiResponse<ReportResponse>>("/api/reports/srs", request);
-    return data.data;
+    return unwrapApiData<ReportResponse>(data);
   },
 
   /**
@@ -49,7 +50,7 @@ export const reportApi = {
    */
   async getReport(reportId: string): Promise<ReportMetadata> {
     const { data } = await api.get<ApiResponse<ReportMetadata>>(`/api/reports/${reportId}`);
-    return data.data;
+    return unwrapApiData<ReportMetadata>(data);
   },
 
   /**
@@ -59,7 +60,7 @@ export const reportApi = {
     const { data } = await api.get<ApiResponse<PageResponse<ReportMetadata>>>("/api/reports", {
       params: query,
     });
-    return data.data;
+    return unwrapApiData<PageResponse<ReportMetadata>>(data);
   },
 
   /**
@@ -96,7 +97,7 @@ export const reportApi = {
       "/api/reports/students/me/tasks",
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<PageResponse<StudentTask>>(data);
   },
 
   /**
@@ -107,7 +108,7 @@ export const reportApi = {
       "/api/reports/students/me/github-stats",
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<GithubStats>(data);
   },
 
   /**
@@ -118,7 +119,7 @@ export const reportApi = {
       "/api/reports/students/me/contribution-summary",
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<ContributionSummary>(data);
   },
 
   // ============ Lecturer Dashboard ============
@@ -131,7 +132,7 @@ export const reportApi = {
       "/api/reports/lecturer/overview",
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<LecturerOverview>(data);
   },
 
   /**
@@ -142,7 +143,7 @@ export const reportApi = {
       "/api/reports/admin/overview",
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<AdminOverview>(data);
   },
 
   /**
@@ -153,7 +154,7 @@ export const reportApi = {
       `/api/reports/lecturer/groups/${groupId}/progress`,
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<GroupProgress>(data);
   },
 
   /**
@@ -167,7 +168,7 @@ export const reportApi = {
       `/api/reports/lecturer/groups/${groupId}/recent-activities`,
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<PageResponse<RecentActivity>>(data);
   },
 
   // ============ Team Leader Dashboard ============
@@ -180,7 +181,7 @@ export const reportApi = {
       `/api/reports/leader/groups/${groupId}/tasks`,
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<PageResponse<StudentTask>>(data);
   },
 
   async assignLeaderTask(
@@ -192,7 +193,7 @@ export const reportApi = {
       `/api/reports/leader/groups/${groupId}/tasks/${taskId}/assignee`,
       request
     );
-    return data.data;
+    return unwrapApiData<StudentTask>(data);
   },
 
   async updateLeaderTaskStatus(
@@ -204,7 +205,7 @@ export const reportApi = {
       `/api/reports/leader/groups/${groupId}/tasks/${taskId}/status`,
       request
     );
-    return data.data;
+    return unwrapApiData<StudentTask>(data);
   },
 
   async getLeaderGroupProgress(groupId: number, query?: GroupProgressQuery): Promise<GroupProgress> {
@@ -212,7 +213,7 @@ export const reportApi = {
       `/api/reports/leader/groups/${groupId}/progress`,
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<GroupProgress>(data);
   },
 
   async getLeaderCommitSummary(groupId: number, query?: GroupProgressQuery): Promise<TeamCommitSummary> {
@@ -220,7 +221,7 @@ export const reportApi = {
       `/api/reports/leader/groups/${groupId}/commit-summary`,
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<TeamCommitSummary>(data);
   },
 
   // ============ Team Member Dashboard ============
@@ -230,7 +231,7 @@ export const reportApi = {
       "/api/reports/members/me/tasks",
       { params: query }
     );
-    return data.data;
+    return unwrapApiData<PageResponse<StudentTask>>(data);
   },
 
   async updateMemberTaskStatus(
@@ -243,7 +244,7 @@ export const reportApi = {
       request,
       { params: { groupId } }
     );
-    return data.data;
+    return unwrapApiData<StudentTask>(data);
   },
 
   async getMemberTaskStats(groupId: number): Promise<TeamMemberTaskStats> {
@@ -251,7 +252,7 @@ export const reportApi = {
       "/api/reports/members/me/task-stats",
       { params: { groupId } }
     );
-    return data.data;
+    return unwrapApiData<TeamMemberTaskStats>(data);
   },
 
   async getMemberCommitStats(groupId: number, query?: Omit<GithubStatsQuery, "groupId">): Promise<GithubStats> {
@@ -259,6 +260,6 @@ export const reportApi = {
       "/api/reports/members/me/commit-stats",
       { params: { groupId, ...(query ?? {}) } }
     );
-    return data.data;
+    return unwrapApiData<GithubStats>(data);
   },
 };

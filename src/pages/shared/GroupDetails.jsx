@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DebouncedSearchInput from "../../components/DebouncedSearchInput";
-import { useGroup, useUsers } from "../../hooks/useUserGroups";
+import { useGroup, useUserGroups, useUsers } from "../../hooks/useUserGroups";
 import { useProfile } from "../../hooks/useAuth";
 import { userGroupApi } from "../../api/userGroupApi";
 
@@ -15,6 +15,7 @@ export default function GroupDetails() {
   const { data: profile } = useProfile();
   const role = profile?.role || profile?.roles?.[0] || null;
   const isAdmin = role === "ADMIN";
+  const currentUserId = Number(profile?.id || 0);
 
   const [memberSearch, setMemberSearch] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -29,7 +30,18 @@ export default function GroupDetails() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const { data: group, isLoading: groupLoading, refetch } = useGroup(groupIdNumber);
-  const { data: studentsData } = useUsers({ role: "STUDENT", page: 0, size: 200 });
+  const { data: membershipsData, isLoading: membershipsLoading } = useUserGroups(currentUserId);
+  const canManageMembers = isAdmin || role === "LECTURER";
+  const { data: studentsData } = useUsers(
+    { role: "STUDENT", page: 0, size: 200 },
+    { enabled: canManageMembers, retry: false }
+  );
+
+  const hasGroupAccess = useMemo(() => {
+    if (isAdmin) return true;
+    const groups = membershipsData?.groups || [];
+    return groups.some((g) => g.groupId === groupIdNumber);
+  }, [groupIdNumber, isAdmin, membershipsData]);
 
   const students = useMemo(() => studentsData?.content || [], [studentsData]);
 
@@ -150,6 +162,32 @@ export default function GroupDetails() {
         <div className="admin-dashboard">
           <div className="panel panel-center-lg">
             <p>Loading group information...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!isAdmin && membershipsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="admin-dashboard">
+          <div className="panel panel-center-lg">
+            <p>Checking access...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!hasGroupAccess) {
+    return (
+      <DashboardLayout>
+        <div className="admin-dashboard">
+          <div className="panel panel-center-lg">
+            <h2 className="group-not-found-title">Access Denied</h2>
+            <p className="group-not-found-text">You can only view groups assigned to you.</p>
+            <button className="primary-button" onClick={() => navigate("/app/groups")}>Back to My Groups</button>
           </div>
         </div>
       </DashboardLayout>
