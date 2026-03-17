@@ -8,6 +8,10 @@ import type {
   LecturerOverviewQuery,
   GroupProgressQuery,
   RecentActivitiesQuery,
+  LeaderGroupTasksQuery,
+  MemberTasksQuery,
+  TaskAssigneeUpdateRequest,
+  TaskStatusUpdateRequest,
 } from "../types/report";
 
 export const reportQueryKeys = {
@@ -21,12 +25,28 @@ export const reportQueryKeys = {
     ["groupProgress", groupId, query] as const,
   recentActivities: (groupId: number, query?: RecentActivitiesQuery) =>
     ["recentActivities", groupId, query] as const,
+  leaderGroupTasks: (groupId: number, query?: LeaderGroupTasksQuery) =>
+    ["leaderGroupTasks", groupId, query] as const,
+  leaderGroupProgress: (groupId: number, query?: GroupProgressQuery) =>
+    ["leaderGroupProgress", groupId, query] as const,
+  leaderCommitSummary: (groupId: number, query?: GroupProgressQuery) =>
+    ["leaderCommitSummary", groupId, query] as const,
+  memberTasks: (query: MemberTasksQuery) => ["memberTasks", query] as const,
+  memberTaskStats: (groupId: number) => ["memberTaskStats", groupId] as const,
+  memberCommitStats: (groupId: number, query?: Omit<GithubStatsQuery, "groupId">) =>
+    ["memberCommitStats", groupId, query] as const,
 };
 
 export const retryUnlessForbidden = (failureCount: number, error: any) => {
   const status = error?.response?.status;
   if (status === 403) return false;
   return failureCount < 2;
+};
+
+export const retryStudentStats = (failureCount: number, error: any) => {
+  const status = error?.response?.status;
+  if (status === 401 || status === 403 || status === 404 || status === 503) return false;
+  return failureCount < 1;
 };
 
 // ============ Report Management Hooks ============
@@ -69,7 +89,10 @@ export const useReports = (query?: ReportsQuery) =>
  */
 export const useDownloadReport = () =>
   useMutation({
-    mutationFn: (reportId: string) => reportApi.downloadReport(reportId),
+    mutationFn: (input: string | { reportId: string; fileName?: string }) => {
+      const payload = typeof input === "string" ? { reportId: input } : input
+      return reportApi.downloadReport(payload.reportId, payload.fileName)
+    },
     onSuccess: ({ url, fileName }) => {
       const link = document.createElement("a");
       link.href = url;
@@ -101,7 +124,10 @@ export const useStudentGithubStats = (query: GithubStatsQuery) =>
     queryKey: reportQueryKeys.studentGithubStats(query),
     queryFn: () => reportApi.getStudentGithubStats(query),
     enabled: query.groupId > 0,
+    retry: retryStudentStats,
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
 /**
@@ -112,7 +138,10 @@ export const useStudentContribution = (query: GithubStatsQuery) =>
     queryKey: reportQueryKeys.studentContribution(query),
     queryFn: () => reportApi.getStudentContributionSummary(query),
     enabled: query.groupId > 0,
+    retry: retryStudentStats,
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
 // ============ Lecturer Dashboard Hooks ============
@@ -137,6 +166,8 @@ export const useGroupProgress = (groupId: number, query?: GroupProgressQuery) =>
     enabled: groupId > 0,
     retry: retryUnlessForbidden,
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
 /**
@@ -149,4 +180,128 @@ export const useRecentActivities = (groupId: number, query?: RecentActivitiesQue
     enabled: groupId > 0,
     retry: retryUnlessForbidden,
     staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+export const useLeaderGroupTasks = (groupId: number, query?: LeaderGroupTasksQuery) =>
+  useQuery({
+    queryKey: reportQueryKeys.leaderGroupTasks(groupId, query),
+    queryFn: () => reportApi.getLeaderGroupTasks(groupId, query),
+    enabled: groupId > 0,
+    retry: retryUnlessForbidden,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+export const useLeaderGroupProgress = (groupId: number, query?: GroupProgressQuery) =>
+  useQuery({
+    queryKey: reportQueryKeys.leaderGroupProgress(groupId, query),
+    queryFn: () => reportApi.getLeaderGroupProgress(groupId, query),
+    enabled: groupId > 0,
+    retry: retryUnlessForbidden,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+export const useLeaderCommitSummary = (groupId: number, query?: GroupProgressQuery) =>
+  useQuery({
+    queryKey: reportQueryKeys.leaderCommitSummary(groupId, query),
+    queryFn: () => reportApi.getLeaderCommitSummary(groupId, query),
+    enabled: groupId > 0,
+    retry: retryUnlessForbidden,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+export const useAssignLeaderTask = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      groupId,
+      taskId,
+      request,
+    }: {
+      groupId: number;
+      taskId: string;
+      request: TaskAssigneeUpdateRequest;
+    }) => reportApi.assignLeaderTask(groupId, taskId, request),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["leaderGroupTasks", vars.groupId] });
+    },
+  });
+};
+
+export const useUpdateLeaderTaskStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      groupId,
+      taskId,
+      request,
+    }: {
+      groupId: number;
+      taskId: string;
+      request: TaskStatusUpdateRequest;
+    }) => reportApi.updateLeaderTaskStatus(groupId, taskId, request),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["leaderGroupTasks", vars.groupId] });
+      qc.invalidateQueries({ queryKey: ["leaderGroupProgress", vars.groupId] });
+    },
+  });
+};
+
+export const useMemberTasks = (query: MemberTasksQuery) =>
+  useQuery({
+    queryKey: reportQueryKeys.memberTasks(query),
+    queryFn: () => reportApi.getMemberTasks(query),
+    enabled: query.groupId > 0,
+    retry: retryUnlessForbidden,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+export const useUpdateMemberTaskStatus = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      groupId,
+      request,
+    }: {
+      taskId: string;
+      groupId: number;
+      request: TaskStatusUpdateRequest;
+    }) => reportApi.updateMemberTaskStatus(taskId, groupId, request),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["memberTasks"] });
+      qc.invalidateQueries({ queryKey: reportQueryKeys.memberTaskStats(vars.groupId) });
+    },
+  });
+};
+
+export const useMemberTaskStats = (groupId: number) =>
+  useQuery({
+    queryKey: reportQueryKeys.memberTaskStats(groupId),
+    queryFn: () => reportApi.getMemberTaskStats(groupId),
+    enabled: groupId > 0,
+    retry: retryUnlessForbidden,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+export const useMemberCommitStats = (groupId: number, query?: Omit<GithubStatsQuery, "groupId">) =>
+  useQuery({
+    queryKey: reportQueryKeys.memberCommitStats(groupId, query),
+    queryFn: () => reportApi.getMemberCommitStats(groupId, query),
+    enabled: groupId > 0,
+    retry: retryUnlessForbidden,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });

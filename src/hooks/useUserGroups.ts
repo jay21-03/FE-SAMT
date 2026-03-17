@@ -13,10 +13,21 @@ import type {
 } from "../types/userGroup"
 import { queryKeys } from "./queryKeys"
 
-export const useUsers = (query?: UserListQuery) =>
+const retryUnlessForbidden = (failureCount: number, error: any) => {
+  const status = error?.response?.status
+  if (status === 403) return false
+  return failureCount < 2
+}
+
+export const useUsers = (
+  query?: UserListQuery,
+  options?: { enabled?: boolean; retry?: boolean }
+) =>
   useQuery({
     queryKey: queryKeys.users(query),
     queryFn: () => userGroupApi.listUsers(query),
+    enabled: options?.enabled ?? true,
+    retry: options?.retry === false ? false : retryUnlessForbidden,
   })
 
 export const useUser = (userId: number) =>
@@ -66,6 +77,14 @@ export const useActiveSemester = () =>
   useQuery({
     queryKey: queryKeys.activeSemester,
     queryFn: () => userGroupApi.getActiveSemester(),
+    staleTime: 300_000,
+  })
+
+export const useSemesterByCode = (code: string) =>
+  useQuery({
+    queryKey: ["semester", "code", code],
+    queryFn: () => userGroupApi.getSemesterByCode(code),
+    enabled: code.trim().length > 0,
     staleTime: 300_000,
   })
 

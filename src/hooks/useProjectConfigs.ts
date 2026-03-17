@@ -15,6 +15,10 @@ export const useProjectConfigByGroup = (groupId: number, options?: { enabled?: b
     queryKey: queryKeys.projectConfigByGroup(groupId),
     queryFn: () => projectConfigApi.getConfigByGroupId(groupId),
     enabled: (options?.enabled ?? true) && groupId > 0,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 404) return false
+      return failureCount < 2
+    },
     staleTime: 30_000,
   })
 
