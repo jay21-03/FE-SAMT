@@ -9,7 +9,7 @@ export default function LecturerDashboard() {
   const navigate = useNavigate();
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState(null);
-  const { isLoading: profileLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile();
 
   // Fetch semesters for filter
   const { data: semestersData } = useSemesters();
@@ -25,7 +25,8 @@ export default function LecturerDashboard() {
     page: 0,
     size: 50,
     semesterId: selectedSemester ? Number(selectedSemester) : undefined,
-  });
+    lecturerId: profile?.id,
+  }, { enabled: !!profile?.id });
   const groups = groupsData?.content || [];
 
   // Select first group if none selected
@@ -95,9 +96,6 @@ export default function LecturerDashboard() {
           </Link>
           <Link className="tab" to="/app/lecturer/github-stats">
             GitHub Stats
-          </Link>
-          <Link className="tab" to="/app/lecturer/grading">
-            Grading
           </Link>
         </div>
 

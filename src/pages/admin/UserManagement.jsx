@@ -10,6 +10,8 @@ import { identityAdminApi } from "../../api/identityAdminApi";
 
 export default function UserManagement() {
   const queryClient = useQueryClient();
+  const pageSize = 20;
+  const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("active");
@@ -45,13 +47,13 @@ export default function UserManagement() {
   const dateRange = getDateRange();
   const { data: auditData, refetch: refetchAudit } = useAuditRange(
     { page: 0, size: 100, ...dateRange },
-    true
+    activeTab === "deleted"
   );
 
   const { data, isLoading, refetch } = useUsers({
     status: statusFilter === "ALL" ? undefined : statusFilter,
-    page: 0,
-    size: 20,
+    page,
+    size: pageSize,
   });
 
   // Password validation
@@ -94,6 +96,7 @@ export default function UserManagement() {
       setCreateForm({ fullName: "", email: "", password: "", role: "STUDENT" });
       
       // Refresh user list
+      setPage(0);
       queryClient.invalidateQueries({ queryKey: ["users"] });
       refetch();
       
@@ -152,6 +155,7 @@ export default function UserManagement() {
       setRestoreUserId("");
       
       // Refresh data
+      setPage(0);
       queryClient.invalidateQueries({ queryKey: ["users"] });
       refetch();
       refetchAudit();
@@ -219,6 +223,17 @@ export default function UserManagement() {
     );
   }, [data, search]);
 
+  const totalPages = Math.max(1, data?.totalPages || 1);
+  const canGoPrev = page > 0;
+  const canGoNext = page + 1 < totalPages;
+
+  const goToPage = (rawValue) => {
+    const parsed = parseInt(rawValue, 10);
+    if (Number.isNaN(parsed)) return;
+    const nextPage = Math.min(Math.max(parsed, 1), totalPages) - 1;
+    setPage(nextPage);
+  };
+
   return (
     <DashboardLayout>
       <div className="admin-dashboard">
@@ -277,12 +292,18 @@ export default function UserManagement() {
             <div className="filter-row">
               <DebouncedSearchInput
                 placeholder="Search by name or email..."
-                onChange={(value) => setSearch(value)}
+                onChange={(value) => {
+                  setSearch(value);
+                  setPage(0);
+                }}
               />
               <select
                 className="select-input"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(0);
+                }}
               >
                 <option value="ALL">All statuses</option>
                 <option value="ACTIVE">Active</option>
@@ -296,6 +317,50 @@ export default function UserManagement() {
               loading={isLoading}
               emptyMessage="No users found."
             />
+
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ color: "#6b7280", fontSize: 14 }}>
+                Page {Math.min(page + 1, totalPages)} / {totalPages}
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  className="primary-button secondary"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={!canGoPrev || isLoading}
+                >
+                  Previous
+                </button>
+
+                <label style={{ color: "#6b7280", fontSize: 13 }}>Go to page</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={Math.min(page + 1, totalPages)}
+                  onChange={(e) => goToPage(e.target.value)}
+                  disabled={isLoading}
+                  style={{ width: 80 }}
+                  className="select-input"
+                />
+
+                <button
+                  className="primary-button secondary"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={!canGoNext || isLoading}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </>
         ) : (
           <>

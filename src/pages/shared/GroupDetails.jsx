@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DebouncedSearchInput from "../../components/DebouncedSearchInput";
+import { useProfile } from "../../hooks/useAuth";
 import { useGroup, useUsers } from "../../hooks/useUserGroups";
 import { userGroupApi } from "../../api/userGroupApi";
 
@@ -13,6 +14,7 @@ export default function GroupDetails() {
   const groupIdNumber = Number(groupId);
   const role = localStorage.getItem("role");
   const isAdmin = role === "ADMIN";
+  const { data: profile } = useProfile();
 
   const [memberSearch, setMemberSearch] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -22,12 +24,18 @@ export default function GroupDetails() {
   // Add Member Modal
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [manualStudentId, setManualStudentId] = useState("");
 
   // Delete Group Modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const { data: group, isLoading: groupLoading, refetch } = useGroup(groupIdNumber);
-  const { data: studentsData } = useUsers({ role: "STUDENT", page: 0, size: 200 });
+  const { data: studentsData } = useUsers(
+    { role: "STUDENT", page: 0, size: 100 },
+    { enabled: isAdmin, retry: false }
+  );
+  const isGroupLecturer = role === "LECTURER" && profile?.id && group?.lecturer?.id === profile.id;
+  const canManageMembers = isAdmin || isGroupLecturer;
 
   const students = useMemo(() => studentsData?.content || [], [studentsData]);
 
@@ -66,14 +74,16 @@ export default function GroupDetails() {
   };
 
   const handleAddMember = async () => {
-    if (!selectedUserId) return;
+    const userIdToAdd = isAdmin ? selectedUserId : manualStudentId;
+    if (!userIdToAdd) return;
     clearMessages();
     setActionLoading(true);
     try {
-      await userGroupApi.addMember(groupIdNumber, { userId: parseInt(selectedUserId, 10) });
+      await userGroupApi.addMember(groupIdNumber, { userId: parseInt(userIdToAdd, 10) });
       setActionSuccess("Member added successfully.");
       setShowAddMemberModal(false);
       setSelectedUserId("");
+      setManualStudentId("");
       refreshData();
     } catch (err) {
       setActionError(err?.response?.data?.message || "Unable to add member.");
@@ -254,7 +264,7 @@ export default function GroupDetails() {
         <div className="panel" style={{ marginTop: 16 }}>
           <div className="panel-header">
             <h3>Members ({memberRows.length})</h3>
-            {(isAdmin || role === "LECTURER") && (
+            {canManageMembers && (
               <button className="primary-button" onClick={() => setShowAddMemberModal(true)}>
                 Add Member
               </button>
@@ -279,7 +289,7 @@ export default function GroupDetails() {
                   <th>Full Name</th>
                   <th>Email</th>
                   <th>Role</th>
-                  {(isAdmin || role === "LECTURER") && <th>Actions</th>}
+                  {canManageMembers && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -292,7 +302,7 @@ export default function GroupDetails() {
                         {member.role}
                       </span>
                     </td>
-                    {(isAdmin || role === "LECTURER") && (
+                    {canManageMembers && (
                       <td>
                         <div style={{ display: "flex", gap: 8 }}>
                           {member.role === "MEMBER" ? (
@@ -332,6 +342,7 @@ export default function GroupDetails() {
               </tbody>
             </table>
           )}
+
         </div>
       </div>
 
@@ -344,25 +355,46 @@ export default function GroupDetails() {
               <button className="modal-close" onClick={() => setShowAddMemberModal(false)}>×</button>
             </div>
             <div className="modal-form">
-              <label className="modal-field">
-                <span>Select Student</span>
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  disabled={actionLoading}
-                >
-                  <option value="">-- Select student --</option>
-                  {availableStudents.map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.fullName} ({student.email})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {availableStudents.length === 0 && (
-                <p style={{ color: "#6b7280", fontSize: 13 }}>
-                  No available students to add to the group.
-                </p>
+              {isAdmin ? (
+                <>
+                  <label className="modal-field">
+                    <span>Select Student</span>
+                    <select
+                      value={selectedUserId}
+                      onChange={(e) => setSelectedUserId(e.target.value)}
+                      disabled={actionLoading}
+                    >
+                      <option value="">-- Select student --</option>
+                      {availableStudents.map((student) => (
+                        <option key={student.id} value={student.id}>
+                          {student.fullName} ({student.email})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {availableStudents.length === 0 && (
+                    <p style={{ color: "#6b7280", fontSize: 13 }}>
+                      No available students to add to the group.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <label className="modal-field">
+                    <span>Student ID</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={manualStudentId}
+                      onChange={(e) => setManualStudentId(e.target.value)}
+                      placeholder="Enter student user ID"
+                      disabled={actionLoading}
+                    />
+                  </label>
+                  <p style={{ color: "#6b7280", fontSize: 13 }}>
+                    Lecturer can add by Student ID. Student must exist and have role STUDENT.
+                  </p>
+                </>
               )}
               <div className="modal-actions">
                 <button
@@ -375,7 +407,7 @@ export default function GroupDetails() {
                 <button
                   className="primary-button"
                   onClick={handleAddMember}
-                  disabled={actionLoading || !selectedUserId}
+                  disabled={actionLoading || (isAdmin ? !selectedUserId : !manualStudentId)}
                 >
                   {actionLoading ? "Adding..." : "Add Member"}
                 </button>

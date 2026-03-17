@@ -27,7 +27,7 @@ export default function Login() {
       } else if (role === "LECTURER") {
         navigate("/app/lecturer/groups/list");
       } else {
-        navigate("/app/student/profile/me");
+        navigate("/app/student/my-work");
       }
     } catch (err) {
       console.error(err);

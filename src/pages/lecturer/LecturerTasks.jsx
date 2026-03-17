@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import { useRecentActivities, useGroupProgress } from "../../hooks/useReport";
+import { useProfile } from "../../hooks/useAuth";
 import { useGroups, useSemesters } from "../../hooks/useUserGroups";
 
 export default function LecturerTasks() {
+  const navigate = useNavigate();
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [sourceFilter, setSourceFilter] = useState("ALL");
   const [page, setPage] = useState(0);
+  const { data: profile } = useProfile();
 
   // Fetch semesters
   const { data: semestersData } = useSemesters();
@@ -20,11 +24,13 @@ export default function LecturerTasks() {
     page: 0,
     size: 100,
     semesterId: selectedSemester ? Number(selectedSemester) : undefined,
-  });
+    lecturerId: profile?.id,
+  }, { enabled: !!profile?.id });
   const groups = groupsData?.content || [];
+  const hasSelectedGroup = selectedGroupId && groups.some((g) => g.id === Number(selectedGroupId));
 
   // Get active group
-  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : (groups[0]?.id || 0);
+  const activeGroupId = hasSelectedGroup ? Number(selectedGroupId) : (groups[0]?.id || 0);
 
   // Fetch group progress for stats - only if activeGroupId is valid
   const { data: progress } = useGroupProgress(activeGroupId);
@@ -158,9 +164,6 @@ export default function LecturerTasks() {
           <Link className="tab" to="/app/lecturer/github-stats">
             GitHub Stats
           </Link>
-          <Link className="tab" to="/app/lecturer/grading">
-            Grading
-          </Link>
         </div>
 
         {/* Stats from Progress */}
@@ -237,6 +240,14 @@ export default function LecturerTasks() {
                 )}
               </select>
             </label>
+            <button
+              className="primary-button secondary"
+              onClick={() => activeGroupId > 0 && navigate(`/app/groups/${activeGroupId}`)}
+              disabled={activeGroupId <= 0}
+              style={{ alignSelf: "flex-end" }}
+            >
+              View Group
+            </button>
             <label className="modal-field" style={{ margin: 0 }}>
               <span>Source</span>
               <select

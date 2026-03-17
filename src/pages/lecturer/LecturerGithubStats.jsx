@@ -1,12 +1,15 @@
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useLecturerOverview, useRecentActivities } from "../../hooks/useReport";
+import { useProfile } from "../../hooks/useAuth";
 import { useGroups, useSemesters } from "../../hooks/useUserGroups";
 
 export default function LecturerGithubStats() {
+  const navigate = useNavigate();
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState("");
+  const { data: profile } = useProfile();
 
   // Fetch semesters
   const { data: semestersData } = useSemesters();
@@ -22,11 +25,13 @@ export default function LecturerGithubStats() {
     page: 0,
     size: 100,
     semesterId: selectedSemester ? Number(selectedSemester) : undefined,
-  });
+    lecturerId: profile?.id,
+  }, { enabled: !!profile?.id });
   const groups = groupsData?.content || [];
+  const hasSelectedGroup = selectedGroupId && groups.some((g) => g.id === Number(selectedGroupId));
 
   // Get active group
-  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : (groups[0]?.id || 0);
+  const activeGroupId = hasSelectedGroup ? Number(selectedGroupId) : (groups[0]?.id || 0);
 
   // Fetch recent GitHub activities for selected group - only if activeGroupId is valid
   const { data: activitiesData, isLoading: activitiesLoading } = useRecentActivities(
@@ -84,9 +89,6 @@ export default function LecturerGithubStats() {
           <Link className="tab tab-active" to="/app/lecturer/github-stats">
             GitHub Stats
           </Link>
-          <Link className="tab" to="/app/lecturer/grading">
-            Grading
-          </Link>
         </div>
 
         {/* Filters */}
@@ -126,6 +128,14 @@ export default function LecturerGithubStats() {
                 ))}
               </select>
             </label>
+            <button
+              className="primary-button secondary"
+              onClick={() => activeGroupId > 0 && navigate(`/app/groups/${activeGroupId}`)}
+              disabled={activeGroupId <= 0}
+              style={{ alignSelf: "flex-end" }}
+            >
+              View Group
+            </button>
           </div>
         </div>
 

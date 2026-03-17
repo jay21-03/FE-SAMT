@@ -60,9 +60,6 @@ export default function Sidebar() {
             <Link className="sidebar-link" to="/app/lecturer/github-stats">
               <span>GitHub Stats</span>
             </Link>
-            <Link className="sidebar-link" to="/app/lecturer/grading">
-              <span>Grading</span>
-            </Link>
             <Link className="sidebar-link" to="/app/reports">
               <span>Reports</span>
             </Link>
@@ -74,11 +71,17 @@ export default function Sidebar() {
         <nav className="sidebar-section">
           <p className="sidebar-section-title">Student</p>
           <div className="sidebar-nav">
-            <Link className="sidebar-link" to="/app/student/profile/me">
-              <span>My Tasks</span>
+            <Link className="sidebar-link" to="/app/student/team-board">
+              <span>Team Board</span>
+            </Link>
+            <Link className="sidebar-link" to="/app/student/my-work">
+              <span>My Work</span>
             </Link>
             <Link className="sidebar-link" to="/app/student/stats">
               <span>My Stats</span>
+            </Link>
+            <Link className="sidebar-link" to="/app/groups">
+              <span>My Groups</span>
             </Link>
             <Link className="sidebar-link" to="/app/student/permissions">
               <span>Permissions</span>

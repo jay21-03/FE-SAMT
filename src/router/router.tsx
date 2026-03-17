@@ -12,7 +12,6 @@ import SyncJobs from "../pages/admin/SyncJobs";
 import LecturerDashboard from "../pages/lecturer/LecturerDashboard";
 import LecturerTasks from "../pages/lecturer/LecturerTasks";
 import LecturerGithubStats from "../pages/lecturer/LecturerGithubStats";
-import LecturerGrading from "../pages/lecturer/LecturerGrading";
 import StudentDashboard from "../pages/student/StudentDashboard";
 import StudentStats from "../pages/student/StudentStats";
 import StudentPermissions from "../pages/student/StudentPermissions";
@@ -68,16 +67,25 @@ export default function AppRouter() {
       />
 
       <Route
-        path="/app/lecturer/grading"
+        path="/app/student/profile/me"
         element={
-          <ProtectedRoute allowedRoles={["LECTURER"]}>
-            <LecturerGrading />
+          <ProtectedRoute allowedRoles={["STUDENT"]}>
+            <Navigate to="/app/student/my-work" replace />
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/app/student/profile/me"
+        path="/app/student/team-board"
+        element={
+          <ProtectedRoute allowedRoles={["STUDENT"]}>
+            <StudentDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/app/student/my-work"
         element={
           <ProtectedRoute allowedRoles={["STUDENT"]}>
             <StudentDashboard />
@@ -190,7 +198,7 @@ export default function AppRouter() {
       <Route
         path="/app/groups/:groupId/config"
         element={
-          <ProtectedRoute allowedRoles={["ADMIN", "STUDENT"]}>
+          <ProtectedRoute allowedRoles={["ADMIN", "LECTURER", "STUDENT"]}>
             <ProjectConfig />
           </ProtectedRoute>
         }

@@ -1,8 +1,10 @@
 import { useState, useMemo } from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useReports, useGenerateReport, useDownloadReport } from "../../hooks/useReport";
-import { useGroups } from "../../hooks/useUserGroups";
+import { useGroups, useUserGroups } from "../../hooks/useUserGroups";
+import { useProfile } from "../../hooks/useAuth";
 import { useProjectConfigByGroup } from "../../hooks/useProjectConfigs";
+import { getAccessTokenUserId } from "../../utils/authToken";
 
 export default function Reports() {
   const [page, setPage] = useState(0);
@@ -21,7 +23,20 @@ export default function Reports() {
   }, [page, statusFilter]);
 
   const { data, isLoading, isFetching, refetch } = useReports(query);
-  const { data: groupsData } = useGroups({ page: 0, size: 100 });
+  const { data: profile } = useProfile();
+  const userId = getAccessTokenUserId() || profile?.id || 0;
+  const role = String(profile?.role || profile?.roles?.[0] || localStorage.getItem("role") || "").toUpperCase();
+  const shouldLoadPagedGroups = role === "ADMIN" || role === "LECTURER";
+
+  const groupQuery = useMemo(() => {
+    if (role === "LECTURER" && userId > 0) {
+      return { page: 0, size: 100, lecturerId: userId };
+    }
+    return { page: 0, size: 100 };
+  }, [role, userId]);
+
+  const { data: pagedGroupsData } = useGroups(groupQuery, { enabled: shouldLoadPagedGroups });
+  const { data: membershipsData } = useUserGroups(userId);
   const { data: configData } = useProjectConfigByGroup(
     selectedGroupId ? Number(selectedGroupId) : 0
   );
@@ -32,7 +47,21 @@ export default function Reports() {
   const reports = data?.content || [];
   const totalPages = data?.totalPages || 0;
   const totalElements = data?.totalElements || 0;
-  const groups = groupsData?.data?.content || groupsData?.content || [];
+  const membershipGroups = (membershipsData?.groups || []).map((membership) => ({
+    id: membership.groupId,
+    groupName: membership.groupName,
+    semesterCode: membership.semesterCode,
+  }));
+
+  const pagedGroups = (pagedGroupsData?.content || []).map((group) => ({
+    id: group.id,
+    groupName: group.groupName,
+    semesterCode: group.semesterCode,
+  }));
+
+  const groups = (shouldLoadPagedGroups && pagedGroups.length > 0 ? pagedGroups : membershipGroups).filter(
+    (group, index, list) => list.findIndex((item) => item.id === group.id) === index
+  );
 
   const completedCount = reports.filter((r) => r.status === "COMPLETED").length;
   const processingCount = reports.filter(
@@ -49,7 +78,7 @@ export default function Reports() {
     setErrorMessage(null);
     try {
       await generateReport.mutateAsync({
-        projectConfigId: configData.data.id,
+        projectConfigId: String(configData.data.id),
         useAi,
         exportType,
       });
@@ -64,10 +93,19 @@ export default function Reports() {
 
   const handleDownload = async (reportId) => {
     try {
-      await downloadReport.mutateAsync(reportId);
+      const report = reports.find((item) => item.reportId === reportId);
+      await downloadReport.mutateAsync({ reportId, fileName: report?.fileName });
     } catch {
       setErrorMessage("Failed to download report.");
     }
+  };
+
+  const parseServerDate = (dateStr) => {
+    if (!dateStr) return null;
+    const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(dateStr);
+    const normalized = hasTimezone ? dateStr : `${dateStr}Z`;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
   };
 
   const getStatusStyle = (status) => {
@@ -81,8 +119,8 @@ export default function Reports() {
   };
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return "-";
-    const date = new Date(dateStr);
+    const date = parseServerDate(dateStr);
+    if (!date) return "-";
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
@@ -482,7 +520,7 @@ export default function Reports() {
                         </div>
                         {report.createdAt && (
                           <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-                            {new Date(report.createdAt).toLocaleString("en-US", {
+                            {(parseServerDate(report.createdAt) || new Date(report.createdAt)).toLocaleString("en-US", {
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",
@@ -702,6 +740,22 @@ export default function Reports() {
                 ))}
               </select>
             </label>
+
+            {groups.length === 0 && (
+              <div
+                style={{
+                  padding: 12,
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  color: "#991b1b",
+                  marginBottom: 12,
+                }}
+              >
+                No groups available for your account. Please check group assignment first.
+              </div>
+            )}
 
             {selectedGroupId && configData?.data?.id && (
               <div

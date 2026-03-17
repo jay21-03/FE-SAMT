@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
+import { useProfile } from "../../hooks/useAuth";
 import {
   useCreateProjectConfig,
   useProjectConfigByGroup,
@@ -17,6 +18,7 @@ export default function ProjectConfig() {
   const hasValidGroupId = Number.isInteger(parsedGroupId) && parsedGroupId > 0;
   const groupIdNumber = hasValidGroupId ? parsedGroupId : 0;
   const role = localStorage.getItem("role");
+  const { data: profile } = useProfile();
 
   const { data, isLoading } = useProjectConfigByGroup(groupIdNumber, { enabled: hasValidGroupId });
   const { data: group } = useGroup(groupIdNumber);
@@ -72,6 +74,12 @@ export default function ProjectConfig() {
     overrides.jiraHostUrl,
   ]);
 
+  const isAdmin = role === "ADMIN";
+  const isGroupLeader = Boolean(
+    profile?.id && group?.members?.some((member) => member.userId === profile.id && member.role === "LEADER")
+  );
+  const canManageConfig = isAdmin || isGroupLeader;
+
   const toTrimmedPayload = (values) => {
     return Object.fromEntries(
       Object.entries(values)
@@ -89,6 +97,10 @@ export default function ProjectConfig() {
 
   const handleSave = async () => {
     if (!hasValidGroupId) return;
+    if (!canManageConfig) {
+      setSaveError("You do not have permission to modify this configuration. Only ADMIN or group LEADER can update.");
+      return;
+    }
     setValidationError(null);
     setSaveError(null);
 
@@ -124,12 +136,20 @@ export default function ProjectConfig() {
 
   const handleVerify = async () => {
     if (!data?.data?.id) return;
+    if (!canManageConfig) {
+      setValidationError("You do not have permission to verify this configuration.");
+      return;
+    }
     await verifyConfig.mutateAsync(data.data.id);
   };
 
   // Sync handlers
   const handleSyncJira = async () => {
     if (!projectConfigId) return;
+    if (!canManageConfig) {
+      setSyncError("You do not have permission to run sync for this configuration.");
+      return;
+    }
     setSyncMessage(null);
     setSyncError(null);
     try {
@@ -144,6 +164,10 @@ export default function ProjectConfig() {
 
   const handleSyncGithub = async () => {
     if (!projectConfigId) return;
+    if (!canManageConfig) {
+      setSyncError("You do not have permission to run sync for this configuration.");
+      return;
+    }
     setSyncMessage(null);
     setSyncError(null);
     try {
@@ -158,6 +182,10 @@ export default function ProjectConfig() {
 
   const handleSyncAll = async () => {
     if (!projectConfigId) return;
+    if (!canManageConfig) {
+      setSyncError("You do not have permission to run sync for this configuration.");
+      return;
+    }
     setSyncMessage(null);
     setSyncError(null);
     try {
@@ -240,6 +268,11 @@ export default function ProjectConfig() {
             <div className="panel-header">
               <h3>Jira Settings</h3>
             </div>
+            {!canManageConfig && (
+              <div className="alert" style={{ marginBottom: 12 }}>
+                Read-only mode: only ADMIN or group LEADER can save/verify/sync this project configuration.
+              </div>
+            )}
             <div className="profile-form">
               <label>
                 <span>Jira Host URL</span>
@@ -248,7 +281,7 @@ export default function ProjectConfig() {
                   value={form.jiraHostUrl}
                   onChange={handleChange("jiraHostUrl")}
                   placeholder="https://your-domain.atlassian.net"
-                  disabled={isLoading}
+                  disabled={isLoading || !canManageConfig}
                 />
               </label>
               <label>
@@ -258,7 +291,7 @@ export default function ProjectConfig() {
                   value={form.jiraEmail}
                   onChange={handleChange("jiraEmail")}
                   placeholder="you@example.com"
-                  disabled={isLoading}
+                  disabled={isLoading || !canManageConfig}
                 />
               </label>
               <label>
@@ -268,7 +301,7 @@ export default function ProjectConfig() {
                   value={form.jiraApiToken}
                   onChange={handleChange("jiraApiToken")}
                   placeholder="jira_***"
-                  disabled={isLoading}
+                  disabled={isLoading || !canManageConfig}
                 />
               </label>
             </div>
@@ -286,7 +319,7 @@ export default function ProjectConfig() {
                   value={form.githubRepoUrl}
                   onChange={handleChange("githubRepoUrl")}
                   placeholder="https://github.com/org/repo"
-                  disabled={isLoading}
+                  disabled={isLoading || !canManageConfig}
                 />
               </label>
               <label>
@@ -296,7 +329,7 @@ export default function ProjectConfig() {
                   value={form.githubToken}
                   onChange={handleChange("githubToken")}
                   placeholder="ghp_***"
-                  disabled={isLoading}
+                  disabled={isLoading || !canManageConfig}
                 />
               </label>
             </div>
@@ -316,13 +349,13 @@ export default function ProjectConfig() {
               {validationError && <div className="alert alert-error">{validationError}</div>}
               {saveError && <div className="alert alert-error">{saveError}</div>}
               <div style={{ display: "flex", gap: 8 }}>
-                <button className="primary-button" onClick={handleSave} disabled={isSaving}>
+                <button className="primary-button" onClick={handleSave} disabled={isSaving || !canManageConfig}>
                   {isSaving ? "Saving..." : "Save Config"}
                 </button>
                 <button
                   className="primary-button secondary"
                   onClick={handleVerify}
-                  disabled={!data?.data?.id || verifyConfig.isPending}
+                  disabled={!data?.data?.id || verifyConfig.isPending || !canManageConfig}
                 >
                   {verifyConfig.isPending ? "Verifying..." : "Verify Connection"}
                 </button>
@@ -351,7 +384,7 @@ export default function ProjectConfig() {
                 <button
                   className="action-button"
                   onClick={handleSyncJira}
-                  disabled={isSyncing}
+                  disabled={isSyncing || !canManageConfig}
                   style={{ background: "#0052cc", color: "white" }}
                 >
                   {syncJira.isPending ? "Syncing Jira..." : "Sync Jira Issues"}
@@ -359,7 +392,7 @@ export default function ProjectConfig() {
                 <button
                   className="action-button"
                   onClick={handleSyncGithub}
-                  disabled={isSyncing}
+                  disabled={isSyncing || !canManageConfig}
                   style={{ background: "#24292e", color: "white" }}
                 >
                   {syncGithub.isPending ? "Syncing GitHub..." : "Sync GitHub Commits"}
@@ -367,7 +400,7 @@ export default function ProjectConfig() {
                 <button
                   className="primary-button"
                   onClick={handleSyncAll}
-                  disabled={isSyncing}
+                  disabled={isSyncing || !canManageConfig}
                 >
                   {syncAll.isPending ? "Syncing All..." : "Sync All"}
                 </button>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function DebouncedSearchInput({
   placeholder = "Search...",
@@ -6,16 +6,21 @@ export default function DebouncedSearchInput({
   onChange,
 }) {
   const [value, setValue] = useState("");
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (typeof onChange === "function") {
-        onChange(value);
+      if (typeof onChangeRef.current === "function") {
+        onChangeRef.current(value);
       }
     }, delay);
 
     return () => clearTimeout(timeout);
-  }, [value, delay, onChange]);
+  }, [value, delay]);
 
   return (
     <input

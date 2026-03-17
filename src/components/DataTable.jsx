@@ -1,4 +1,15 @@
-export default function DataTable({ columns, data, loading, emptyMessage = "No data", keyField = "id" }) {
+export default function DataTable({
+  columns,
+  data,
+  loading,
+  emptyMessage = "No data",
+  keyField = "id",
+  pagination,
+}) {
+  const page = pagination?.page ?? 0
+  const totalPages = pagination?.totalPages ?? 0
+  const onPageChange = pagination?.onPageChange
+
   return (
     <div className="panel">
       <div className="data-table-wrapper">
@@ -37,6 +48,28 @@ export default function DataTable({ columns, data, loading, emptyMessage = "No d
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && typeof onPageChange === "function" && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, padding: 16 }}>
+          <button
+            className="action-button"
+            onClick={() => onPageChange(Math.max(0, page - 1))}
+            disabled={page === 0}
+          >
+            Previous
+          </button>
+          <span style={{ padding: "8px 12px", fontSize: 13 }}>
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            className="action-button"
+            onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
+            disabled={page >= totalPages - 1}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
