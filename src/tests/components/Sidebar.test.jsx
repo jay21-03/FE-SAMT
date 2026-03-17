@@ -39,7 +39,8 @@ describe('Sidebar', () => {
 
   it('renders student navigation links for STUDENT role', () => {
     renderSidebar('STUDENT')
-    expect(screen.getByText('My Tasks')).toBeInTheDocument()
+    expect(screen.getByText('Team Board')).toBeInTheDocument()
+    expect(screen.getByText('My Work')).toBeInTheDocument()
     expect(screen.getByText('Permissions')).toBeInTheDocument()
   })
 })

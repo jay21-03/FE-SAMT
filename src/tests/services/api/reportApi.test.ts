@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { reportApi } from '../../../api/reportApi'
 
-const { getMock, postMock } = vi.hoisted(() => ({
+const { getMock, postMock, patchMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   postMock: vi.fn(),
+  patchMock: vi.fn(),
 }))
 
 vi.mock('../../../api/apiClient.ts', () => ({
   api: {
     get: getMock,
     post: postMock,
+    patch: patchMock,
   },
 }))
 
@@ -17,6 +19,7 @@ describe('reportApi', () => {
   beforeEach(() => {
     getMock.mockReset()
     postMock.mockReset()
+    patchMock.mockReset()
   })
 
   it('generates report and fetches metadata/list', async () => {
@@ -25,11 +28,11 @@ describe('reportApi', () => {
       .mockResolvedValueOnce({ data: { data: { reportId: 'r-1', type: 'SRS' } } })
       .mockResolvedValueOnce({ data: { data: { content: [{ reportId: 'r-1' }], totalElements: 1 } } })
 
-    const generated = await reportApi.generateSrsReport({ projectConfigId: 1, useAi: true, exportType: 'DOCX' })
+    const generated = await reportApi.generateSrsReport({ projectConfigId: '1', useAi: true, exportType: 'DOCX' })
     const metadata = await reportApi.getReport('r-1')
     const list = await reportApi.listReports({ page: 0, size: 10 })
 
-    expect(postMock).toHaveBeenCalledWith('/api/reports/srs', { projectConfigId: 1, useAi: true, exportType: 'DOCX' })
+    expect(postMock).toHaveBeenCalledWith('/api/reports/srs', { projectConfigId: '1', useAi: true, exportType: 'DOCX' })
     expect(getMock).toHaveBeenCalledWith('/api/reports/r-1')
     expect(getMock).toHaveBeenCalledWith('/api/reports', { params: { page: 0, size: 10 } })
     expect(generated).toEqual({ reportId: 'r-1' })
@@ -73,10 +76,10 @@ describe('reportApi', () => {
       headers: {},
     })
 
-    const result = await reportApi.downloadReport('r-9')
+    const result = await reportApi.downloadReport('r-9', 'srs_r-9.pdf')
 
     expect(getMock).toHaveBeenCalledWith('/api/reports/r-9/download', { responseType: 'blob' })
-    expect(result).toEqual({ url: 'blob:fallback-url', fileName: 'report_r-9.docx' })
+    expect(result).toEqual({ url: 'blob:fallback-url', fileName: 'srs_r-9.pdf' })
 
     createObjectURLSpy.mockRestore()
   })
@@ -97,5 +100,52 @@ describe('reportApi', () => {
     expect(getMock).toHaveBeenCalledWith('/api/reports/lecturer/overview', { params: { from: '2026-01-01' } })
     expect(getMock).toHaveBeenCalledWith('/api/reports/lecturer/groups/10/progress', { params: { to: '2026-03-01' } })
     expect(getMock).toHaveBeenCalledWith('/api/reports/lecturer/groups/10/recent-activities', { params: { page: 0, size: 5 } })
+  })
+
+  it('covers leader and member report endpoints', async () => {
+    getMock.mockResolvedValue({ data: { data: { content: [] } } })
+    patchMock.mockResolvedValue({ data: { data: { taskId: 'T-1', status: 'IN_PROGRESS' } } })
+
+    await reportApi.getLeaderGroupTasks(15, { status: 'TODO', page: 0, size: 20 })
+    await reportApi.assignLeaderTask(15, 'T-1', { assigneeUserId: 88 })
+    await reportApi.updateLeaderTaskStatus(15, 'T-1', { status: 'DONE' })
+    await reportApi.getLeaderGroupProgress(15, { from: '2026-01-01', to: '2026-03-01' })
+    await reportApi.getLeaderCommitSummary(15, { from: '2026-01-01', to: '2026-03-01' })
+
+    await reportApi.getMemberTasks({ groupId: 15, status: 'TODO', page: 0, size: 20 })
+    await reportApi.updateMemberTaskStatus('T-2', 15, { status: 'IN_PROGRESS' })
+    await reportApi.getMemberTaskStats(15)
+    await reportApi.getMemberCommitStats(15, { from: '2026-01-01', to: '2026-03-01' })
+
+    expect(getMock).toHaveBeenCalledWith('/api/reports/leader/groups/15/tasks', {
+      params: { status: 'TODO', page: 0, size: 20 },
+    })
+    expect(patchMock).toHaveBeenCalledWith('/api/reports/leader/groups/15/tasks/T-1/assignee', {
+      assigneeUserId: 88,
+    })
+    expect(patchMock).toHaveBeenCalledWith('/api/reports/leader/groups/15/tasks/T-1/status', {
+      status: 'DONE',
+    })
+    expect(getMock).toHaveBeenCalledWith('/api/reports/leader/groups/15/progress', {
+      params: { from: '2026-01-01', to: '2026-03-01' },
+    })
+    expect(getMock).toHaveBeenCalledWith('/api/reports/leader/groups/15/commit-summary', {
+      params: { from: '2026-01-01', to: '2026-03-01' },
+    })
+
+    expect(getMock).toHaveBeenCalledWith('/api/reports/members/me/tasks', {
+      params: { groupId: 15, status: 'TODO', page: 0, size: 20 },
+    })
+    expect(patchMock).toHaveBeenCalledWith(
+      '/api/reports/members/me/tasks/T-2/status',
+      { status: 'IN_PROGRESS' },
+      { params: { groupId: 15 } }
+    )
+    expect(getMock).toHaveBeenCalledWith('/api/reports/members/me/task-stats', {
+      params: { groupId: 15 },
+    })
+    expect(getMock).toHaveBeenCalledWith('/api/reports/members/me/commit-stats', {
+      params: { groupId: 15, from: '2026-01-01', to: '2026-03-01' },
+    })
   })
 })

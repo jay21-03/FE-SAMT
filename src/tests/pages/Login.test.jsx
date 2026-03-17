@@ -56,6 +56,31 @@ describe('Login page', () => {
     expect(navigateMock).toHaveBeenCalledWith('/app/admin/dashboard')
   })
 
+  it('logs in and redirects student to my-work', async () => {
+    loginMock.mockResolvedValue({})
+    getProfileMock.mockResolvedValue({ role: 'STUDENT' })
+
+    render(<Login />)
+
+    fireEvent.change(screen.getByPlaceholderText('you@samt.edu.vn'), {
+      target: { value: 'student@samt.edu.vn' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), {
+      target: { value: 'Password1!' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }))
+
+    await waitFor(() => {
+      expect(loginMock).toHaveBeenCalledWith({
+        email: 'student@samt.edu.vn',
+        password: 'Password1!',
+      })
+    })
+
+    expect(localStorage.getItem('role')).toBe('STUDENT')
+    expect(navigateMock).toHaveBeenCalledWith('/app/student/my-work')
+  })
+
   it('shows error message when login fails', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})

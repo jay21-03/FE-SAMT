@@ -271,9 +271,9 @@ describe('useReport', () => {
       wrapper: wrapperFactory(),
     })
 
-    await result.current.mutateAsync({ projectConfigId: 1, useAi: true, exportType: 'DOCX' })
+    await result.current.mutateAsync({ projectConfigId: '1', useAi: true, exportType: 'DOCX' })
 
-    expect(generateSrsReportMock).toHaveBeenCalledWith({ projectConfigId: 1, useAi: true, exportType: 'DOCX' })
+    expect(generateSrsReportMock).toHaveBeenCalledWith({ projectConfigId: '1', useAi: true, exportType: 'DOCX' })
   })
 
   it('triggers report download mutation', async () => {
@@ -295,7 +295,7 @@ describe('useReport', () => {
 
     await result.current.mutateAsync('report-download-1')
 
-    expect(downloadReportMock).toHaveBeenCalledWith('report-download-1')
+    expect(downloadReportMock).toHaveBeenCalledWith('report-download-1', undefined)
     expect(appendChildSpy).toHaveBeenCalled()
     expect(removeChildSpy).toHaveBeenCalled()
     expect(revokeSpy).toHaveBeenCalledWith('blob:test')
@@ -323,7 +323,7 @@ describe('useReport', () => {
 
     await result.current.mutateAsync('report-9')
 
-    expect(downloadReportMock).toHaveBeenCalledWith('report-9')
+    expect(downloadReportMock).toHaveBeenCalledWith('report-9', undefined)
 
     clickSpy.mockRestore()
     revokeSpy.mockRestore()

@@ -6,7 +6,10 @@ const {
   useReportsMock,
   useGenerateReportMock,
   useDownloadReportMock,
+  useUserGroupsMock,
   useGroupsMock,
+  useProfileMock,
+  getAccessTokenUserIdMock,
   useProjectConfigByGroupMock,
   refetchReportsMock,
   generateMutateAsyncMock,
@@ -15,7 +18,10 @@ const {
   useReportsMock: vi.fn(),
   useGenerateReportMock: vi.fn(),
   useDownloadReportMock: vi.fn(),
+  useUserGroupsMock: vi.fn(),
   useGroupsMock: vi.fn(),
+  useProfileMock: vi.fn(),
+  getAccessTokenUserIdMock: vi.fn(),
   useProjectConfigByGroupMock: vi.fn(),
   refetchReportsMock: vi.fn(),
   generateMutateAsyncMock: vi.fn(),
@@ -33,7 +39,16 @@ vi.mock('../../hooks/useReport', () => ({
 }))
 
 vi.mock('../../hooks/useUserGroups', () => ({
-  useGroups: (query) => useGroupsMock(query),
+  useGroups: (query, options) => useGroupsMock(query, options),
+  useUserGroups: (userId) => useUserGroupsMock(userId),
+}))
+
+vi.mock('../../hooks/useAuth', () => ({
+  useProfile: () => useProfileMock(),
+}))
+
+vi.mock('../../utils/authToken', () => ({
+  getAccessTokenUserId: () => getAccessTokenUserIdMock(),
 }))
 
 vi.mock('../../hooks/useProjectConfigs', () => ({
@@ -45,7 +60,10 @@ describe('Reports page', () => {
     useReportsMock.mockReset()
     useGenerateReportMock.mockReset()
     useDownloadReportMock.mockReset()
+    useUserGroupsMock.mockReset()
     useGroupsMock.mockReset()
+    useProfileMock.mockReset()
+    getAccessTokenUserIdMock.mockReset()
     useProjectConfigByGroupMock.mockReset()
     refetchReportsMock.mockReset()
     generateMutateAsyncMock.mockReset()
@@ -58,8 +76,18 @@ describe('Reports page', () => {
       refetch: refetchReportsMock,
     })
 
+    useProfileMock.mockReturnValue({
+      data: { id: 99, role: 'LECTURER' },
+    })
+
+    getAccessTokenUserIdMock.mockReturnValue(99)
+
     useGroupsMock.mockReturnValue({
       data: { content: [{ id: 10, groupName: 'SE1705-G1', semesterCode: 'SU26' }] },
+    })
+
+    useUserGroupsMock.mockReturnValue({
+      data: { userId: 99, groups: [{ groupId: 10, groupName: 'SE1705-G1', semesterCode: 'SU26', role: 'LEADER' }] },
     })
 
     useProjectConfigByGroupMock.mockImplementation((groupId) => {
@@ -126,7 +154,7 @@ describe('Reports page', () => {
 
     await waitFor(() => {
       expect(generateMutateAsyncMock).toHaveBeenCalledWith({
-        projectConfigId: 1010,
+        projectConfigId: '1010',
         useAi: true,
         exportType: 'DOCX',
       })
@@ -134,6 +162,10 @@ describe('Reports page', () => {
 
     expect(await screen.findByText('Report generation started! It will appear in the list shortly.')).toBeInTheDocument()
     expect(refetchReportsMock).toHaveBeenCalled()
+    expect(useGroupsMock).toHaveBeenCalledWith(
+      { page: 0, size: 100, lecturerId: 99 },
+      { enabled: true }
+    )
   })
 
   it('shows download error when download fails', async () => {

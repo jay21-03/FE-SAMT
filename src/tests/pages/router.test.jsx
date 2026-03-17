@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import AppRouter from '../../router/router'
 
 vi.mock('../../pages/auth/Login.jsx', () => ({ default: () => <div>Login Page</div> }))
@@ -16,7 +16,12 @@ vi.mock('../../pages/lecturer/LecturerDashboard.jsx', () => ({ default: () => <d
 vi.mock('../../pages/lecturer/LecturerTasks.jsx', () => ({ default: () => <div>Lecturer Tasks</div> }))
 vi.mock('../../pages/lecturer/LecturerGithubStats.jsx', () => ({ default: () => <div>Lecturer Github Stats</div> }))
 vi.mock('../../pages/lecturer/LecturerGrading.jsx', () => ({ default: () => <div>Lecturer Grading</div> }))
-vi.mock('../../pages/student/StudentDashboard.jsx', () => ({ default: () => <div>Student Dashboard</div> }))
+vi.mock('../../pages/student/StudentDashboard.jsx', () => ({
+  default: () => {
+    const location = useLocation()
+    return <div>Student Dashboard {location.pathname}</div>
+  },
+}))
 vi.mock('../../pages/student/StudentStats.jsx', () => ({ default: () => <div>Student Stats</div> }))
 vi.mock('../../pages/student/StudentPermissions.jsx', () => ({ default: () => <div>Student Permissions</div> }))
 vi.mock('../../pages/shared/UserProfile.jsx', () => ({ default: () => <div>User Profile</div> }))
@@ -84,6 +89,16 @@ describe('AppRouter', () => {
 
   it('renders student route for STUDENT role', () => {
     renderRouter('/app/student/profile/me', 'STUDENT')
-    expect(screen.getByText('Student Dashboard')).toBeInTheDocument()
+    expect(screen.getByText('Student Dashboard /app/student/my-work')).toBeInTheDocument()
+  })
+
+  it('renders team board route for STUDENT role', () => {
+    renderRouter('/app/student/team-board', 'STUDENT')
+    expect(screen.getByText('Student Dashboard /app/student/team-board')).toBeInTheDocument()
+  })
+
+  it('renders my work route for STUDENT role', () => {
+    renderRouter('/app/student/my-work', 'STUDENT')
+    expect(screen.getByText('Student Dashboard /app/student/my-work')).toBeInTheDocument()
   })
 })
