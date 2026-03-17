@@ -67,6 +67,19 @@ export default function LecturerGithubStats() {
     };
   }, [activities]);
 
+  const getActivityTypeClass = (type) => {
+    const normalized = type?.toLowerCase();
+    if (normalized === "commit") return "commit";
+    return "pr";
+  };
+
+  const getRankClass = (idx) => {
+    if (idx === 0) return "rank-1";
+    if (idx === 1) return "rank-2";
+    if (idx === 2) return "rank-3";
+    return "rank-default";
+  };
+
   return (
     <DashboardLayout>
       <div className="lecturer-dashboard">
@@ -92,12 +105,12 @@ export default function LecturerGithubStats() {
         </div>
 
         {/* Filters */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Filters</h3>
           </div>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "12px 0" }}>
-            <label className="modal-field" style={{ margin: 0, minWidth: 150 }}>
+          <div className="lecturer-filters-row">
+            <label className="modal-field lecturer-filter-semester">
               <span>Semester</span>
               <select
                 value={selectedSemester}
@@ -114,7 +127,7 @@ export default function LecturerGithubStats() {
                 ))}
               </select>
             </label>
-            <label className="modal-field" style={{ margin: 0, minWidth: 200 }}>
+            <label className="modal-field lecturer-filter-group">
               <span>Group</span>
               <select
                 value={selectedGroupId}
@@ -141,77 +154,62 @@ export default function LecturerGithubStats() {
 
         {/* Overview Stats */}
         {overview && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16, marginTop: 16 }}>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
-              <div className="stat-value" style={{ color: "#059669" }}>
+          <div className="lecturer-github-overview-grid">
+            <div className="stat-card lecturer-overview-card">
+              <div className="stat-value lecturer-stat-completed">
                 {overview.githubCommitCount}
               </div>
               <div className="stat-label">Total Commits</div>
             </div>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
-              <div className="stat-value" style={{ color: "#7c3aed" }}>
+            <div className="stat-card lecturer-overview-card">
+              <div className="stat-value lecturer-stat-commit">
                 {overview.githubPrCount}
               </div>
               <div className="stat-label">Pull Requests</div>
             </div>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
+            <div className="stat-card lecturer-overview-card">
               <div className="stat-value">{overview.groupCount}</div>
               <div className="stat-label">Groups</div>
             </div>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
+            <div className="stat-card lecturer-overview-card">
               <div className="stat-value">{overview.studentCount}</div>
               <div className="stat-label">Students</div>
             </div>
           </div>
         )}
 
-        <div className="admin-main-grid" style={{ marginTop: 16 }}>
+        <div className="admin-main-grid panel-mt-16">
           {/* Recent Activity for selected group */}
           <div className="panel">
             <div className="panel-header">
               <h3>Recent GitHub Activity</h3>
               {activeGroupId > 0 && (
-                <span style={{ fontSize: 12, color: "#6b7280" }}>
+                <span className="text-muted-sm">
                   {groups.find((g) => g.id === activeGroupId)?.groupName || ""}
                 </span>
               )}
             </div>
             {activitiesLoading ? (
-              <div style={{ padding: 32, textAlign: "center", color: "#6b7280" }}>
+              <div className="lecturer-loading">
                 Loading...
               </div>
             ) : activities.length === 0 ? (
-              <div style={{ padding: 32, textAlign: "center", color: "#6b7280" }}>
+              <div className="lecturer-loading">
                 No GitHub activities found. Make sure data is synced.
               </div>
             ) : (
-              <ul className="activity-list" style={{ maxHeight: 400, overflowY: "auto" }}>
+              <ul className="activity-list lecturer-github-activity-list">
                 {activities.map((a) => (
                   <li key={a.activityId} className="activity-item">
                     <div className="activity-main">
-                      <span
-                        style={{
-                          fontSize: 10,
-                          padding: "2px 6px",
-                          borderRadius: 4,
-                          marginRight: 8,
-                          background:
-                            a.type?.toLowerCase() === "commit"
-                              ? "#f0fdf4"
-                              : "#faf5ff",
-                          color:
-                            a.type?.toLowerCase() === "commit"
-                              ? "#059669"
-                              : "#7c3aed",
-                        }}
-                      >
+                      <span className={`lecturer-github-type-badge ${getActivityTypeClass(a.type)}`}>
                         {a.type}
                       </span>
                       <a
                         href={a.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ color: "#0066cc", textDecoration: "none" }}
+                        className="lecturer-link"
                       >
                         {a.title?.length > 60 ? `${a.title.substring(0, 60)}...` : a.title}
                       </a>
@@ -237,7 +235,7 @@ export default function LecturerGithubStats() {
               <h3>Top Contributors</h3>
             </div>
             {githubStats.topContributors.length === 0 ? (
-              <div style={{ padding: 32, textAlign: "center", color: "#6b7280" }}>
+              <div className="lecturer-loading">
                 No contributor data available.
               </div>
             ) : (
@@ -245,20 +243,7 @@ export default function LecturerGithubStats() {
                 {githubStats.topContributors.map(([author, count], idx) => (
                   <div key={author} className="stat-row">
                     <span>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          width: 20,
-                          height: 20,
-                          borderRadius: "50%",
-                          background: idx === 0 ? "#fbbf24" : idx === 1 ? "#9ca3af" : idx === 2 ? "#d97706" : "#e5e7eb",
-                          color: idx < 3 ? "white" : "#374151",
-                          textAlign: "center",
-                          lineHeight: "20px",
-                          fontSize: 11,
-                          marginRight: 8,
-                        }}
-                      >
+                      <span className={`lecturer-rank-badge ${getRankClass(idx)}`}>
                         {idx + 1}
                       </span>
                       {author}
@@ -269,20 +254,20 @@ export default function LecturerGithubStats() {
               </div>
             )}
 
-            <div style={{ marginTop: 24, padding: "16px 0", borderTop: "1px solid #e5e7eb" }}>
-              <h4 style={{ fontSize: 14, marginBottom: 12, color: "#374151" }}>
+            <div className="lecturer-summary-box">
+              <h4 className="lecturer-summary-title">
                 Activity Summary (Selected Group)
               </h4>
               <div className="student-stats">
                 <div className="stat-row">
                   <span>Recent Commits</span>
-                  <span className="stat-number" style={{ color: "#059669" }}>
+                  <span className="stat-number lecturer-stat-completed">
                     {githubStats.commitCount}
                   </span>
                 </div>
                 <div className="stat-row">
                   <span>Recent PRs</span>
-                  <span className="stat-number" style={{ color: "#7c3aed" }}>
+                  <span className="stat-number lecturer-stat-commit">
                     {githubStats.prCount}
                   </span>
                 </div>
@@ -293,7 +278,7 @@ export default function LecturerGithubStats() {
 
         {/* Last Sync Info */}
         {overview?.lastSyncAt && (
-          <div style={{ marginTop: 16, color: "#6b7280", fontSize: 12, textAlign: "right" }}>
+          <div className="lecturer-last-sync">
             Last synced: {new Date(overview.lastSyncAt).toLocaleString("en-US")}
           </div>
         )}

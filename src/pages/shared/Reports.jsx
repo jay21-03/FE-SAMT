@@ -1,10 +1,8 @@
 import { useState, useMemo } from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useReports, useGenerateReport, useDownloadReport } from "../../hooks/useReport";
-import { useGroups, useUserGroups } from "../../hooks/useUserGroups";
-import { useProfile } from "../../hooks/useAuth";
+import { useGroups } from "../../hooks/useUserGroups";
 import { useProjectConfigByGroup } from "../../hooks/useProjectConfigs";
-import { getAccessTokenUserId } from "../../utils/authToken";
 
 export default function Reports() {
   const [page, setPage] = useState(0);
@@ -23,20 +21,12 @@ export default function Reports() {
   }, [page, statusFilter]);
 
   const { data, isLoading, isFetching, refetch } = useReports(query);
-  const { data: profile } = useProfile();
-  const userId = getAccessTokenUserId() || profile?.id || 0;
-  const role = String(profile?.role || profile?.roles?.[0] || localStorage.getItem("role") || "").toUpperCase();
-  const shouldLoadPagedGroups = role === "ADMIN" || role === "LECTURER";
-
-  const groupQuery = useMemo(() => {
-    if (role === "LECTURER" && userId > 0) {
-      return { page: 0, size: 100, lecturerId: userId };
-    }
-    return { page: 0, size: 100 };
-  }, [role, userId]);
-
-  const { data: pagedGroupsData } = useGroups(groupQuery, { enabled: shouldLoadPagedGroups });
-  const { data: membershipsData } = useUserGroups(userId);
+  const { data: totalReportsData } = useReports({ page: 0, size: 1 });
+  const { data: completedReportsData } = useReports({ page: 0, size: 1, status: "COMPLETED" });
+  const { data: processingReportsData } = useReports({ page: 0, size: 1, status: "PROCESSING" });
+  const { data: pendingReportsData } = useReports({ page: 0, size: 1, status: "PENDING" });
+  const { data: failedReportsData } = useReports({ page: 0, size: 1, status: "FAILED" });
+  const { data: groupsData } = useGroups({ page: 0, size: 100 });
   const { data: configData } = useProjectConfigByGroup(
     selectedGroupId ? Number(selectedGroupId) : 0
   );
@@ -47,27 +37,13 @@ export default function Reports() {
   const reports = data?.content || [];
   const totalPages = data?.totalPages || 0;
   const totalElements = data?.totalElements || 0;
-  const membershipGroups = (membershipsData?.groups || []).map((membership) => ({
-    id: membership.groupId,
-    groupName: membership.groupName,
-    semesterCode: membership.semesterCode,
-  }));
+  const groups = groupsData?.data?.content || groupsData?.content || [];
 
-  const pagedGroups = (pagedGroupsData?.content || []).map((group) => ({
-    id: group.id,
-    groupName: group.groupName,
-    semesterCode: group.semesterCode,
-  }));
-
-  const groups = (shouldLoadPagedGroups && pagedGroups.length > 0 ? pagedGroups : membershipGroups).filter(
-    (group, index, list) => list.findIndex((item) => item.id === group.id) === index
-  );
-
-  const completedCount = reports.filter((r) => r.status === "COMPLETED").length;
-  const processingCount = reports.filter(
-    (r) => r.status === "PROCESSING" || r.status === "PENDING"
-  ).length;
-  const failedCount = reports.filter((r) => r.status === "FAILED").length;
+  const completedCount = completedReportsData?.totalElements ?? 0;
+  const processingCount =
+    (processingReportsData?.totalElements ?? 0) + (pendingReportsData?.totalElements ?? 0);
+  const failedCount = failedReportsData?.totalElements ?? 0;
+  const totalReportsCount = totalReportsData?.totalElements ?? 0;
 
   const handleGenerate = async () => {
     if (!configData?.data?.id) {
@@ -78,7 +54,7 @@ export default function Reports() {
     setErrorMessage(null);
     try {
       await generateReport.mutateAsync({
-        projectConfigId: String(configData.data.id),
+        projectConfigId: configData.data.id,
         useAi,
         exportType,
       });
@@ -93,34 +69,25 @@ export default function Reports() {
 
   const handleDownload = async (reportId) => {
     try {
-      const report = reports.find((item) => item.reportId === reportId);
-      await downloadReport.mutateAsync({ reportId, fileName: report?.fileName });
+      await downloadReport.mutateAsync(reportId);
     } catch {
       setErrorMessage("Failed to download report.");
     }
   };
 
-  const parseServerDate = (dateStr) => {
-    if (!dateStr) return null;
-    const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(dateStr);
-    const normalized = hasTimezone ? dateStr : `${dateStr}Z`;
-    const date = new Date(normalized);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
-
-  const getStatusStyle = (status) => {
-    const styles = {
-      COMPLETED: { bg: "#dcfce7", color: "#166534", icon: "✓" },
-      FAILED: { bg: "#fee2e2", color: "#991b1b", icon: "✕" },
-      PROCESSING: { bg: "#fef3c7", color: "#92400e", icon: "⟳" },
-      PENDING: { bg: "#e0e7ff", color: "#3730a3", icon: "◷" },
+  const getStatusIcon = (status) => {
+    const icons = {
+      COMPLETED: "✓",
+      FAILED: "✕",
+      PROCESSING: "⟳",
+      PENDING: "◷",
     };
-    return styles[status] || styles.PENDING;
+    return icons[status] || "◷";
   };
 
   const formatDate = (dateStr) => {
-    const date = parseServerDate(dateStr);
-    if (!date) return "-";
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
@@ -150,137 +117,52 @@ export default function Reports() {
             <h1 className="page-title">Reports</h1>
             <p className="page-subtitle">Generate and manage SRS documentation for your projects</p>
           </div>
-          <button
-            className="primary-button"
-            onClick={() => setShowGenerateModal(true)}
-            style={{ display: "flex", alignItems: "center", gap: 8 }}
-          >
-            <span style={{ fontSize: 18 }}>+</span> Generate Report
+          <button className="primary-button reports-generate-btn" onClick={() => setShowGenerateModal(true)}>
+            <span className="reports-generate-icon">+</span> Generate Report
           </button>
         </div>
 
         {/* Messages */}
         {successMessage && (
-          <div
-            style={{
-              padding: "12px 16px",
-              background: "#dcfce7",
-              border: "1px solid #86efac",
-              borderRadius: 8,
-              color: "#166534",
-              marginBottom: 16,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
+          <div className="alert alert-success reports-alert-row">
             <span>✓</span> {successMessage}
-            <button
-              onClick={() => setSuccessMessage(null)}
-              style={{
-                marginLeft: "auto",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 16,
-              }}
-            >
+            <button className="reports-alert-close" onClick={() => setSuccessMessage(null)}>
               ×
             </button>
           </div>
         )}
         {errorMessage && (
-          <div
-            style={{
-              padding: "12px 16px",
-              background: "#fee2e2",
-              border: "1px solid #fca5a5",
-              borderRadius: 8,
-              color: "#991b1b",
-              marginBottom: 16,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
+          <div className="alert alert-error reports-alert-row">
             <span>!</span> {errorMessage}
-            <button
-              onClick={() => setErrorMessage(null)}
-              style={{
-                marginLeft: "auto",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 16,
-              }}
-            >
+            <button className="reports-alert-close" onClick={() => setErrorMessage(null)}>
               ×
             </button>
           </div>
         )}
 
         {/* Stats Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
-          <div
-            style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              borderRadius: 12,
-              padding: 20,
-              color: "white",
-            }}
-          >
-            <div style={{ fontSize: 32, fontWeight: 700 }}>{totalElements}</div>
-            <div style={{ fontSize: 13, opacity: 0.9 }}>Total Reports</div>
+        <div className="reports-stats-grid">
+          <div className="reports-stat-card reports-stat-card-total">
+            <div className="reports-stat-value">{totalReportsCount}</div>
+            <div className="reports-stat-label">Total Reports</div>
           </div>
-          <div
-            style={{
-              background: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
-              borderRadius: 12,
-              padding: 20,
-              color: "white",
-            }}
-          >
-            <div style={{ fontSize: 32, fontWeight: 700 }}>{completedCount}</div>
-            <div style={{ fontSize: 13, opacity: 0.9 }}>Completed</div>
+          <div className="reports-stat-card reports-stat-card-completed">
+            <div className="reports-stat-value">{completedCount}</div>
+            <div className="reports-stat-label">Completed</div>
           </div>
-          <div
-            style={{
-              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-              borderRadius: 12,
-              padding: 20,
-              color: "white",
-            }}
-          >
-            <div style={{ fontSize: 32, fontWeight: 700 }}>{processingCount}</div>
-            <div style={{ fontSize: 13, opacity: 0.9 }}>Processing</div>
+          <div className="reports-stat-card reports-stat-card-processing">
+            <div className="reports-stat-value">{processingCount}</div>
+            <div className="reports-stat-label">Processing</div>
           </div>
-          <div
-            style={{
-              background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-              borderRadius: 12,
-              padding: 20,
-              color: "white",
-            }}
-          >
-            <div style={{ fontSize: 32, fontWeight: 700 }}>{failedCount}</div>
-            <div style={{ fontSize: 13, opacity: 0.9 }}>Failed</div>
+          <div className="reports-stat-card reports-stat-card-failed">
+            <div className="reports-stat-value">{failedCount}</div>
+            <div className="reports-stat-label">Failed</div>
           </div>
         </div>
 
         {/* Filter Bar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            marginBottom: 16,
-            padding: "12px 16px",
-            background: "#f8fafc",
-            borderRadius: 8,
-            border: "1px solid #e2e8f0",
-          }}
-        >
-          <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>Filter by Status:</span>
+        <div className="chip-filter-row">
+          <span className="chip-filter-label">Filter by Status:</span>
           {["", "COMPLETED", "PROCESSING", "PENDING", "FAILED"].map((status) => (
             <button
               key={status}
@@ -288,239 +170,91 @@ export default function Reports() {
                 setStatusFilter(status);
                 setPage(0);
               }}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                border: "none",
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: "pointer",
-                background: statusFilter === status ? "#3b82f6" : "#e2e8f0",
-                color: statusFilter === status ? "white" : "#475569",
-                transition: "all 0.2s",
-              }}
+              className={`chip-filter-btn ${statusFilter === status ? "active" : ""}`}
             >
               {status || "All"}
             </button>
           ))}
           <button
             onClick={() => refetch()}
-            style={{
-              marginLeft: "auto",
-              padding: "6px 12px",
-              borderRadius: 6,
-              border: "1px solid #e2e8f0",
-              background: "white",
-              cursor: "pointer",
-              fontSize: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-            }}
+            className="primary-button secondary compact-button chip-filter-refresh"
           >
             ↻ Refresh
           </button>
         </div>
 
         {/* Reports Table */}
-        <div
-          style={{
-            background: "white",
-            borderRadius: 12,
-            border: "1px solid #e2e8f0",
-            overflow: "auto",
-          }}
-        >
+        <div className="reports-table-shell">
           {isLoading || isFetching ? (
-            <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>⟳</div>
+            <div className="reports-loading-block">
+              <div className="reports-loading-icon">⟳</div>
               Loading reports...
             </div>
           ) : reports.length === 0 ? (
-            <div style={{ padding: 60, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-              <h3 style={{ margin: "0 0 8px", color: "#334155" }}>No reports yet</h3>
-              <p style={{ color: "#64748b", margin: 0 }}>
+            <div className="reports-empty-block">
+              <div className="reports-empty-icon">📋</div>
+              <h3 className="reports-empty-title">No reports yet</h3>
+              <p className="reports-empty-subtitle">
                 Generate your first SRS report to get started
               </p>
             </div>
           ) : (
-            <table style={{ width: "100%", minWidth: 800, borderCollapse: "collapse", tableLayout: "fixed" }}>
+            <table className="reports-table">
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
-                  <th
-                    style={{
-                      padding: "14px 20px",
-                      textAlign: "left",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "#475569",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      borderBottom: "1px solid #e2e8f0",
-                      width: "45%",
-                    }}
-                  >
+                <tr>
+                  <th className="reports-col-report">
                     Report
                   </th>
-                  <th
-                    style={{
-                      padding: "14px 20px",
-                      textAlign: "left",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "#475569",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      borderBottom: "1px solid #e2e8f0",
-                      width: "15%",
-                    }}
-                  >
+                  <th className="reports-col-status">
                     Status
                   </th>
-                  <th
-                    style={{
-                      padding: "14px 20px",
-                      textAlign: "left",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "#475569",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      borderBottom: "1px solid #e2e8f0",
-                      width: "20%",
-                    }}
-                  >
+                  <th className="reports-col-created">
                     Created
                   </th>
-                  <th
-                    style={{
-                      padding: "14px 20px",
-                      textAlign: "right",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: "#475569",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                      borderBottom: "1px solid #e2e8f0",
-                      width: "20%",
-                    }}
-                  >
+                  <th className="reports-col-actions">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {reports.map((report, idx) => {
-                  const statusStyle = getStatusStyle(report.status);
+                {reports.map((report) => {
                   return (
-                    <tr
-                      key={report.reportId}
-                      style={{
-                        background: idx % 2 === 0 ? "white" : "#fafbfc",
-                        transition: "background 0.2s",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = idx % 2 === 0 ? "white" : "#fafbfc")
-                      }
-                    >
-                      <td style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                          <div
-                            style={{
-                              width: 44,
-                              height: 44,
-                              minWidth: 44,
-                              borderRadius: 10,
-                              background: "#f1f5f9",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 22,
-                            }}
-                          >
+                    <tr key={report.reportId}>
+                      <td>
+                        <div className="reports-row-main">
+                          <div className="reports-file-icon">
                             {getFileIcon(report.fileName)}
                           </div>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div
-                              style={{
-                                fontWeight: 600,
-                                color: "#1e293b",
-                                fontSize: 14,
-                                marginBottom: 4,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                              title={report.fileName}
-                            >
+                          <div className="reports-file-meta">
+                            <div className="reports-file-name" title={report.fileName}>
                               {report.fileName || "Generating..."}
                             </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 10,
-                                fontSize: 12,
-                                color: "#64748b",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  padding: "3px 8px",
-                                  background: "#e0f2fe",
-                                  color: "#0369a1",
-                                  borderRadius: 4,
-                                  fontWeight: 500,
-                                  fontSize: 11,
-                                }}
-                              >
+                            <div className="reports-file-submeta">
+                              <span className="reports-type-badge">
                                 {report.type || "SRS"}
                               </span>
-                              <span
-                                style={{ fontFamily: "monospace", fontSize: 11, color: "#94a3b8" }}
-                                title={report.reportId}
-                              >
+                              <span className="reports-id" title={report.reportId}>
                                 #{report.reportId?.substring(0, 8)}
                               </span>
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9" }}>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "6px 14px",
-                            borderRadius: 20,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            background: statusStyle.bg,
-                            color: statusStyle.color,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          <span
-                            style={{
-                              animation:
-                                report.status === "PROCESSING" ? "spin 1s linear infinite" : "none",
-                            }}
-                          >
-                            {statusStyle.icon}
+                      <td>
+                        <span className={`reports-status-badge reports-status-${report.status?.toLowerCase()}`}>
+                          <span className={report.status === "PROCESSING" ? "reports-spin" : ""}>
+                            {getStatusIcon(report.status)}
                           </span>
                           {report.status}
                         </span>
                       </td>
-                      <td style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9" }}>
-                        <div style={{ fontSize: 13, color: "#334155", fontWeight: 500 }}>
+                      <td>
+                        <div className="reports-created-main">
                           {formatDate(report.createdAt)}
                         </div>
                         {report.createdAt && (
-                          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-                            {(parseServerDate(report.createdAt) || new Date(report.createdAt)).toLocaleString("en-US", {
+                          <div className="reports-created-sub">
+                            {new Date(report.createdAt).toLocaleString("en-US", {
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",
@@ -529,60 +263,21 @@ export default function Reports() {
                           </div>
                         )}
                       </td>
-                      <td
-                        style={{
-                          padding: "16px 20px",
-                          borderBottom: "1px solid #f1f5f9",
-                          textAlign: "right",
-                        }}
-                      >
+                      <td className="reports-actions-cell">
                         {report.status === "COMPLETED" ? (
                           <button
+                            className="primary-button compact-button reports-download-btn"
                             onClick={() => handleDownload(report.reportId)}
                             disabled={downloadReport.isPending}
-                            style={{
-                              padding: "10px 20px",
-                              borderRadius: 8,
-                              border: "none",
-                              background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                              color: "white",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 8,
-                              transition: "transform 0.2s, box-shadow 0.2s",
-                              whiteSpace: "nowrap",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = "translateY(-1px)";
-                              e.currentTarget.style.boxShadow = "0 4px 12px rgba(59,130,246,0.4)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = "translateY(0)";
-                              e.currentTarget.style.boxShadow = "none";
-                            }}
                           >
                             ↓ Download
                           </button>
                         ) : report.status === "PROCESSING" || report.status === "PENDING" ? (
-                          <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 500 }}>
+                          <span className="reports-processing-label">
                             Processing...
                           </span>
                         ) : (
-                          <button
-                            style={{
-                              padding: "8px 16px",
-                              borderRadius: 6,
-                              border: "1px solid #fca5a5",
-                              background: "#fef2f2",
-                              color: "#dc2626",
-                              fontSize: 12,
-                              fontWeight: 500,
-                              cursor: "default",
-                            }}
-                          >
+                          <button className="reports-failed-pill" disabled>
                             Failed
                           </button>
                         )}
@@ -596,51 +291,22 @@ export default function Reports() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "14px 20px",
-                borderTop: "1px solid #e2e8f0",
-                background: "#f8fafc",
-              }}
-            >
-              <span style={{ fontSize: 13, color: "#64748b", fontWeight: 500 }}>
+            <div className="reports-pagination">
+              <span className="reports-pagination-text">
                 Page {page + 1} of {totalPages} ({totalElements} total reports)
               </span>
-              <div style={{ display: "flex", gap: 10 }}>
+              <div className="reports-pagination-actions">
                 <button
+                  className="primary-button secondary compact-button"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 6,
-                    border: "1px solid #e2e8f0",
-                    background: page === 0 ? "#f1f5f9" : "white",
-                    cursor: page === 0 ? "not-allowed" : "pointer",
-                    color: page === 0 ? "#94a3b8" : "#334155",
-                    fontSize: 13,
-                    fontWeight: 500,
-                    transition: "all 0.2s",
-                  }}
                 >
                   ← Previous
                 </button>
                 <button
+                  className="primary-button secondary compact-button"
                   onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 6,
-                    border: "1px solid #e2e8f0",
-                    background: page >= totalPages - 1 ? "#f1f5f9" : "white",
-                    cursor: page >= totalPages - 1 ? "not-allowed" : "pointer",
-                    color: page >= totalPages - 1 ? "#94a3b8" : "#334155",
-                    fontSize: 13,
-                    fontWeight: 500,
-                    transition: "all 0.2s",
-                  }}
                 >
                   Next →
                 </button>
@@ -650,40 +316,24 @@ export default function Reports() {
         </div>
 
         {/* Info Section */}
-        <div
-          style={{
-            marginTop: 24,
-            padding: 20,
-            background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
-            borderRadius: 12,
-            border: "1px solid #bae6fd",
-          }}
-        >
-          <h3 style={{ margin: "0 0 12px", color: "#0369a1", fontSize: 16 }}>
+        <div className="reports-info-card">
+          <h3 className="reports-info-title">
             About SRS Reports
           </h3>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 16,
-              fontSize: 13,
-              color: "#0c4a6e",
-            }}
-          >
-            <div style={{ display: "flex", gap: 8 }}>
+          <div className="reports-info-grid">
+            <div className="reports-info-item">
               <span>📊</span>
               <span>Reports are generated from synced Jira issues and GitHub commits</span>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="reports-info-item">
               <span>🤖</span>
               <span>AI enhancement provides better descriptions and summaries</span>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="reports-info-item">
               <span>📄</span>
               <span>Export formats: DOCX (Word) or PDF</span>
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="reports-info-item">
               <span>✓</span>
               <span>Ensure project config is verified before generating</span>
             </div>
@@ -693,44 +343,24 @@ export default function Reports() {
 
       {/* Generate Report Modal */}
       {showGenerateModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowGenerateModal(false)}
-          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-        >
-          <div
-            className="modal-content"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 480, borderRadius: 16 }}
-          >
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 16,
-                  background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 16px",
-                  fontSize: 28,
-                }}
-              >
+        <div className="modal-overlay reports-modal-overlay" onClick={() => setShowGenerateModal(false)}>
+          <div className="modal-content reports-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="reports-modal-header-center">
+              <div className="reports-modal-icon">
                 📄
               </div>
-              <h2 style={{ margin: 0, fontSize: 20 }}>Generate SRS Report</h2>
-              <p style={{ margin: "8px 0 0", color: "#64748b", fontSize: 14 }}>
+              <h2 className="reports-modal-title">Generate SRS Report</h2>
+              <p className="reports-modal-subtitle">
                 Create documentation from your project data
               </p>
             </div>
 
             <label className="modal-field">
-              <span style={{ fontWeight: 500 }}>Select Group *</span>
+              <span className="reports-field-title">Select Group *</span>
               <select
                 value={selectedGroupId}
                 onChange={(e) => setSelectedGroupId(e.target.value)}
-                style={{ padding: "10px 12px", borderRadius: 8 }}
+                className="reports-select"
               >
                 <option value="">Choose a group...</option>
                 {groups.map((group) => (
@@ -741,59 +371,18 @@ export default function Reports() {
               </select>
             </label>
 
-            {groups.length === 0 && (
-              <div
-                style={{
-                  padding: 12,
-                  background: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  borderRadius: 8,
-                  fontSize: 13,
-                  color: "#991b1b",
-                  marginBottom: 12,
-                }}
-              >
-                No groups available for your account. Please check group assignment first.
-              </div>
-            )}
-
             {selectedGroupId && configData?.data?.id && (
-              <div
-                style={{
-                  padding: 16,
-                  background: configData.data.state === "VERIFIED" ? "#f0fdf4" : "#fefce8",
-                  borderRadius: 10,
-                  marginBottom: 16,
-                  border: `1px solid ${
-                    configData.data.state === "VERIFIED" ? "#86efac" : "#fde047"
-                  }`,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
+              <div className={`reports-config-box ${configData.data.state === "VERIFIED" ? "verified" : "warning"}`}>
+                <div className="reports-config-row">
                   <div>
-                    <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
+                    <div className="reports-config-label">
                       Project Configuration
                     </div>
-                    <div style={{ fontFamily: "monospace", fontSize: 13 }}>
+                    <div className="reports-config-id">
                       {String(configData.data.id).substring(0, 12)}...
                     </div>
                   </div>
-                  <span
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: 12,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      background: configData.data.state === "VERIFIED" ? "#dcfce7" : "#fef9c3",
-                      color: configData.data.state === "VERIFIED" ? "#166534" : "#854d0e",
-                    }}
-                  >
+                  <span className={`reports-config-state ${configData.data.state === "VERIFIED" ? "verified" : "warning"}`}>
                     {configData.data.state}
                   </span>
                 </div>
@@ -801,73 +390,50 @@ export default function Reports() {
             )}
 
             {selectedGroupId && !configData?.data?.id && (
-              <div
-                style={{
-                  padding: 16,
-                  background: "#fef2f2",
-                  borderRadius: 10,
-                  marginBottom: 16,
-                  border: "1px solid #fca5a5",
-                  color: "#991b1b",
-                  fontSize: 13,
-                }}
-              >
+              <div className="reports-config-box error">
                 ⚠️ This group does not have a project configuration. Please configure it first.
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <label className="modal-field" style={{ margin: 0 }}>
-                <span style={{ fontWeight: 500 }}>Export Format</span>
+            <div className="reports-modal-grid">
+              <label className="modal-field reports-modal-field-reset">
+                <span className="reports-field-title">Export Format</span>
                 <select
                   value={exportType}
                   onChange={(e) => setExportType(e.target.value)}
-                  style={{ padding: "10px 12px", borderRadius: 8 }}
+                  className="reports-select"
                 >
                   <option value="DOCX">📘 DOCX (Word)</option>
                   <option value="PDF">📕 PDF</option>
                 </select>
               </label>
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 12px",
-                    background: useAi ? "#ede9fe" : "#f1f5f9",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                    border: useAi ? "1px solid #c4b5fd" : "1px solid #e2e8f0",
-                    transition: "all 0.2s",
-                  }}
-                >
+              <div className="reports-ai-col">
+                <label className={`reports-ai-toggle ${useAi ? "active" : ""}`}>
                   <input
                     type="checkbox"
                     checked={useAi}
                     onChange={(e) => setUseAi(e.target.checked)}
-                    style={{ width: 16, height: 16, accentColor: "#7c3aed" }}
+                    className="reports-ai-checkbox"
                   />
-                  <span style={{ fontSize: 13, fontWeight: 500, color: useAi ? "#5b21b6" : "#64748b" }}>
+                  <span className="reports-ai-label">
                     🤖 Use AI
                   </span>
                 </label>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+            <div className="reports-modal-actions">
               <button
-                className="secondary-button"
+                className="primary-button secondary reports-modal-btn"
                 onClick={() => {
                   setShowGenerateModal(false);
                   setSelectedGroupId("");
                 }}
-                style={{ flex: 1, padding: "12px 16px", borderRadius: 8 }}
               >
                 Cancel
               </button>
               <button
-                className="primary-button"
+                className="primary-button reports-modal-btn"
                 onClick={handleGenerate}
                 disabled={
                   !selectedGroupId ||
@@ -875,17 +441,6 @@ export default function Reports() {
                   configData?.data?.state !== "VERIFIED" ||
                   generateReport.isPending
                 }
-                style={{
-                  flex: 1,
-                  padding: "12px 16px",
-                  borderRadius: 8,
-                  background:
-                    !selectedGroupId ||
-                    !configData?.data?.id ||
-                    configData?.data?.state !== "VERIFIED"
-                      ? "#94a3b8"
-                      : "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                }}
               >
                 {generateReport.isPending ? "Generating..." : "Generate Report"}
               </button>
@@ -893,13 +448,6 @@ export default function Reports() {
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </DashboardLayout>
   );
 }

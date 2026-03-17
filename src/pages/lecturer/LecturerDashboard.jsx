@@ -46,9 +46,9 @@ export default function LecturerDashboard() {
   const isLoading = profileLoading || overviewLoading || groupsLoading;
 
   const getCompletionPercent = () => {
-    if (!progress) return { todo: 33, inProgress: 33, done: 34 };
+    if (!progress) return { todo: 0, inProgress: 0, done: 0 };
     const total = progress.todoCount + progress.inProgressCount + progress.doneCount;
-    if (total === 0) return { todo: 33, inProgress: 33, done: 34 };
+    if (total === 0) return { todo: 0, inProgress: 0, done: 0 };
     return {
       todo: Math.round((progress.todoCount / total) * 100),
       inProgress: Math.round((progress.inProgressCount / total) * 100),
@@ -75,7 +75,7 @@ export default function LecturerDashboard() {
                 setSelectedSemester(e.target.value);
                 setSelectedGroupId(null);
               }}
-              style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid #d1d5db" }}
+              className="lecturer-semester-select"
             >
               <option value="">All Semesters</option>
               {semesters.map((s) => (
@@ -101,33 +101,33 @@ export default function LecturerDashboard() {
 
         {/* Overview Stats */}
         {overview && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16, marginTop: 16 }}>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
+          <div className="lecturer-overview-grid">
+            <div className="stat-card lecturer-overview-card">
               <div className="stat-value">{overview.groupCount}</div>
               <div className="stat-label">Groups</div>
             </div>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
+            <div className="stat-card lecturer-overview-card">
               <div className="stat-value">{overview.studentCount}</div>
               <div className="stat-label">Students</div>
             </div>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
+            <div className="stat-card lecturer-overview-card">
               <div className="stat-value">{overview.taskCount}</div>
               <div className="stat-label">Total Tasks</div>
             </div>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
-              <div className="stat-value" style={{ color: "#059669" }}>
+            <div className="stat-card lecturer-overview-card">
+              <div className="stat-value lecturer-stat-completed">
                 {overview.completedTaskCount}
               </div>
               <div className="stat-label">Completed</div>
             </div>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
-              <div className="stat-value" style={{ color: "#7c3aed" }}>
+            <div className="stat-card lecturer-overview-card">
+              <div className="stat-value lecturer-stat-commit">
                 {overview.githubCommitCount}
               </div>
               <div className="stat-label">Commits</div>
             </div>
-            <div className="stat-card" style={{ padding: 16, textAlign: "center" }}>
-              <div className="stat-value" style={{ color: "#0066cc" }}>
+            <div className="stat-card lecturer-overview-card">
+              <div className="stat-value lecturer-stat-pr">
                 {overview.githubPrCount}
               </div>
               <div className="stat-label">PRs</div>
@@ -136,28 +136,23 @@ export default function LecturerDashboard() {
         )}
 
         {/* Groups List */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Groups ({groups.length})</h3>
           </div>
           {isLoading ? (
-            <div style={{ padding: 32, textAlign: "center", color: "#6b7280" }}>Loading...</div>
+            <div className="lecturer-loading">Loading...</div>
           ) : groups.length === 0 ? (
-            <div style={{ padding: 32, textAlign: "center", color: "#6b7280" }}>
+            <div className="lecturer-loading">
               No groups found for this semester.
             </div>
           ) : (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "12px 0" }}>
+            <div className="lecturer-groups-row">
               {groups.map((group) => (
                 <button
                   key={group.id}
                   onClick={() => setSelectedGroupId(group.id)}
-                  className={`action-button ${activeGroupId === group.id ? "primary" : ""}`}
-                  style={{
-                    background: activeGroupId === group.id ? "#0066cc" : "#f3f4f6",
-                    color: activeGroupId === group.id ? "white" : "#374151",
-                    border: "none",
-                  }}
+                  className={`action-button lecturer-group-chip ${activeGroupId === group.id ? "active" : ""}`}
                 >
                   {group.groupName}
                 </button>
@@ -167,13 +162,12 @@ export default function LecturerDashboard() {
         </div>
 
         {activeGroupId && (
-          <div className="lecturer-main-grid" style={{ marginTop: 16 }}>
+          <div className="lecturer-main-grid panel-mt-16">
             <div className="panel">
               <div className="panel-header">
                 <h3>Progress Overview</h3>
                 <button
-                  className="action-button"
-                  style={{ fontSize: 12, padding: "4px 12px" }}
+                  className="action-button compact-button"
                   onClick={() => navigate(`/app/groups/${activeGroupId}`)}
                 >
                   View Group
@@ -181,7 +175,7 @@ export default function LecturerDashboard() {
               </div>
 
               {progressLoading ? (
-                <div style={{ padding: 32, textAlign: "center" }}>Loading...</div>
+                <div className="lecturer-loading">Loading...</div>
               ) : progress ? (
                 <div className="progress-overview">
                   <div className="progress-pie-legend">
@@ -222,14 +216,14 @@ export default function LecturerDashboard() {
                           style={{ width: `${Math.round(progress.completionRate * 100)}%` }}
                         />
                       </div>
-                      <span style={{ fontSize: 12, color: "#6b7280" }}>
+                        <span className="text-muted-sm">
                         {Math.round(progress.completionRate * 100)}%
                       </span>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div style={{ padding: 32, textAlign: "center", color: "#6b7280" }}>
+                  <div className="lecturer-loading">
                   No progress data available.
                 </div>
               )}
@@ -240,12 +234,12 @@ export default function LecturerDashboard() {
                 <h3>Recent Activity</h3>
               </div>
               {activitiesLoading ? (
-                <div style={{ padding: 32, textAlign: "center" }}>Loading...</div>
+                <div className="lecturer-loading">Loading...</div>
               ) : (
                 <ul className="activity-list">
                   {activities.length === 0 ? (
                     <li className="activity-item">
-                      <div className="activity-main" style={{ color: "#6b7280" }}>
+                      <div className="activity-main text-muted">
                         No recent activities.
                       </div>
                     </li>
@@ -257,14 +251,7 @@ export default function LecturerDashboard() {
                       >
                         <div className="activity-main">
                           <span
-                            style={{
-                              fontSize: 10,
-                              padding: "2px 6px",
-                              borderRadius: 4,
-                              marginRight: 8,
-                              background: a.source === "JIRA" ? "#e6f0ff" : "#f0f0f0",
-                              color: a.source === "JIRA" ? "#0052cc" : "#24292e",
-                            }}
+                            className={`lecturer-activity-source ${a.source === "JIRA" ? "jira" : "github"}`}
                           >
                             {a.source}
                           </span>

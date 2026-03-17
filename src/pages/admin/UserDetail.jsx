@@ -121,7 +121,7 @@ export default function UserDetail() {
     return (
       <DashboardLayout>
         <div className="admin-dashboard">
-          <div className="panel" style={{ padding: 40, textAlign: "center" }}>
+          <div className="panel panel-center-lg">
             <p>Loading user information...</p>
           </div>
         </div>
@@ -133,9 +133,9 @@ export default function UserDetail() {
     return (
       <DashboardLayout>
         <div className="admin-dashboard">
-          <div className="panel" style={{ padding: 40, textAlign: "center" }}>
-            <h2 style={{ color: "#dc2626", marginBottom: 16 }}>User Not Found</h2>
-            <p style={{ color: "#6b7280", marginBottom: 20 }}>
+          <div className="panel panel-center-lg">
+            <h2 className="text-danger">User Not Found</h2>
+            <p className="text-muted panel-mb-16">
               User ID: {userId} does not exist or has been deleted.
             </p>
             <button className="primary-button" onClick={() => navigate("/app/admin/users")}>
@@ -161,7 +161,7 @@ export default function UserDetail() {
             >
               ← Back
             </button>
-            <h1 className="page-title" style={{ marginTop: 8 }}>User Details</h1>
+            <h1 className="page-title page-title-mt-8">User Details</h1>
             <p className="page-subtitle">View and manage account information.</p>
           </div>
         </div>
@@ -230,12 +230,12 @@ export default function UserDetail() {
         </div>
 
         {/* User Groups */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Groups</h3>
           </div>
           {groupsLoading ? (
-            <p style={{ padding: 16, color: "#6b7280" }}>Loading...</p>
+            <p className="table-empty-cell text-muted">Loading...</p>
           ) : userGroups?.groups?.length > 0 ? (
             <table className="data-table">
               <thead>
@@ -262,12 +262,12 @@ export default function UserDetail() {
               </tbody>
             </table>
           ) : (
-            <p style={{ padding: 16, color: "#6b7280" }}>No groups joined.</p>
+            <p className="table-empty-cell text-muted">No groups joined.</p>
           )}
         </div>
 
         {/* Actions */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Actions</h3>
           </div>
@@ -309,7 +309,7 @@ export default function UserDetail() {
               <button className="modal-close" onClick={() => setShowLockModal(false)}>×</button>
             </div>
             <div className="modal-form">
-              <p style={{ marginBottom: 16, color: "#6b7280" }}>
+              <p className="text-muted panel-mb-16">
                 Are you sure you want to lock the account <strong>{user.email}</strong>?
               </p>
               <label className="modal-field">
@@ -356,7 +356,7 @@ export default function UserDetail() {
                 <p>
                   Are you sure you want to delete the account <strong>{user.email}</strong>?
                   <br />
-                  <span style={{ color: "#dc2626" }}>This action cannot be undone.</span>
+                  <span className="text-danger">This action cannot be undone.</span>
                 </p>
               </div>
               <div className="modal-actions">

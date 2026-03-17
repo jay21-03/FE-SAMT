@@ -195,18 +195,16 @@ export default function SemesterManagement() {
       key: "actions",
       header: "",
       render: (row) => (
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="flex-row-8">
           <button
-            className="primary-button secondary"
-            style={{ padding: "4px 10px", fontSize: 12 }}
+            className="primary-button secondary compact-button"
             onClick={() => openEditModal(row)}
           >
             Edit
           </button>
           {!row.isActive && (
             <button
-              className="action-button success"
-              style={{ padding: "4px 10px", fontSize: 12 }}
+              className="action-button success compact-button"
               onClick={() => handleActivateSemester(row.id)}
               disabled={actionLoading}
             >
@@ -267,12 +265,12 @@ export default function SemesterManagement() {
         />
 
         {/* Info Panel */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Guidelines</h3>
           </div>
-          <div style={{ padding: "12px 0", color: "#6b7280", fontSize: 14, lineHeight: 1.6 }}>
-            <ul style={{ marginLeft: 20 }}>
+          <div className="guideline-text">
+            <ul className="guideline-list">
               <li><strong>Semester Code:</strong> Unique identifier for the semester (e.g., FA2024, SP2025)</li>
               <li><strong>Activate:</strong> Only one semester can be active at a time. When activating a new semester, the current active semester will be deactivated automatically.</li>
               <li><strong>Groups:</strong> Project groups will be assigned to specific semesters.</li>
@@ -321,7 +319,7 @@ export default function SemesterManagement() {
                   />
                 </label>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div className="grid-two-col">
                   <label className="modal-field">
                     <span>Start Date</span>
                     <input
@@ -380,7 +378,7 @@ export default function SemesterManagement() {
             </div>
 
             <form className="modal-form" onSubmit={handleEditSemester}>
-              <div className="user-info-item" style={{ marginBottom: 16, padding: "12px", background: "#f9fafb", borderRadius: 8 }}>
+              <div className="user-info-item info-highlight-box">
                 <span className="info-label">Semester Code</span>
                 <span className="info-value">{editingSemester.code}</span>
               </div>
@@ -396,7 +394,7 @@ export default function SemesterManagement() {
                 />
               </label>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="grid-two-col">
                 <label className="modal-field">
                   <span>Start Date</span>
                   <input

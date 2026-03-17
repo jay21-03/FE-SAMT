@@ -250,34 +250,16 @@ export default function UserManagement() {
         </div>
 
         {/* Tabs */}
-        <div className="tabs" style={{ marginBottom: 16, display: "flex", gap: 0, borderBottom: "1px solid #e5e7eb" }}>
+        <div className="tabs">
           <button
             className={`tab-button ${activeTab === "active" ? "active" : ""}`}
             onClick={() => setActiveTab("active")}
-            style={{
-              padding: "10px 20px",
-              border: "none",
-              background: activeTab === "active" ? "#fff" : "transparent",
-              borderBottom: activeTab === "active" ? "2px solid #3b82f6" : "2px solid transparent",
-              cursor: "pointer",
-              fontWeight: activeTab === "active" ? 600 : 400,
-              color: activeTab === "active" ? "#3b82f6" : "#6b7280",
-            }}
           >
             Active Users ({data?.totalElements || 0})
           </button>
           <button
-            className={`tab-button ${activeTab === "deleted" ? "active" : ""}`}
+            className={`tab-button tab-danger ${activeTab === "deleted" ? "active" : ""}`}
             onClick={() => setActiveTab("deleted")}
-            style={{
-              padding: "10px 20px",
-              border: "none",
-              background: activeTab === "deleted" ? "#fff" : "transparent",
-              borderBottom: activeTab === "deleted" ? "2px solid #dc2626" : "2px solid transparent",
-              cursor: "pointer",
-              fontWeight: activeTab === "deleted" ? 600 : 400,
-              color: activeTab === "deleted" ? "#dc2626" : "#6b7280",
-            }}
           >
             Deleted Users ({deletedUsers.length})
           </button>
@@ -365,12 +347,12 @@ export default function UserManagement() {
         ) : (
           <>
             {/* Restore by ID */}
-            <div className="panel" style={{ marginBottom: 16 }}>
+            <div className="panel panel-mb-16">
               <div className="panel-header">
                 <h3>Restore User by ID</h3>
               </div>
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-end", padding: "12px 0" }}>
-                <label className="modal-field" style={{ margin: 0, flex: 1 }}>
+              <div className="flex-row-12-end py-12">
+                <label className="modal-field field-flex-1">
                   <span>User ID</span>
                   <input
                     type="number"
@@ -381,15 +363,14 @@ export default function UserManagement() {
                   />
                 </label>
                 <button
-                  className="action-button success"
+                  className="action-button success compact-button"
                   onClick={() => handleRestoreUser(parseInt(restoreUserId, 10))}
                   disabled={restoreLoading || !restoreUserId}
-                  style={{ height: 38 }}
                 >
                   {restoreLoading ? "Restoring..." : "Restore"}
                 </button>
               </div>
-              <p style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}>
+              <p className="text-muted-sm">
                 If you know the User ID, enter it above to restore. Otherwise, find the user in the list below.
               </p>
             </div>
@@ -400,7 +381,7 @@ export default function UserManagement() {
                 <h3>Recently Deleted Users</h3>
               </div>
               {deletedUsers.length === 0 ? (
-                <p style={{ padding: 16, color: "#6b7280", textAlign: "center" }}>
+                <p className="table-empty-cell text-muted">
                   No deleted users found in recent audit logs.
                 </p>
               ) : (
@@ -416,7 +397,7 @@ export default function UserManagement() {
                   <tbody>
                     {deletedUsers.map((user) => (
                       <tr key={`deleted-${user.id}-${user.deletedAt}`}>
-                        <td style={{ fontFamily: "monospace", fontWeight: 600 }}>#{user.id}</td>
+                        <td className="text-mono-strong">#{user.id}</td>
                         <td>
                           {new Date(user.deletedAt).toLocaleString("en-US", {
                             dateStyle: "medium",
@@ -426,8 +407,7 @@ export default function UserManagement() {
                         <td>{user.deletedBy}</td>
                         <td>
                           <button
-                            className="action-button success"
-                            style={{ padding: "4px 12px", fontSize: 12 }}
+                            className="action-button success compact-button"
                             onClick={() => handleRestoreUser(user.id)}
                             disabled={restoreLoading}
                           >
@@ -442,12 +422,12 @@ export default function UserManagement() {
             </div>
 
             {/* Info */}
-            <div className="panel" style={{ marginTop: 16 }}>
+            <div className="panel panel-mt-16">
               <div className="panel-header">
                 <h3>About Deleted Users</h3>
               </div>
-              <div style={{ padding: "12px 0", color: "#6b7280", fontSize: 14, lineHeight: 1.6 }}>
-                <ul style={{ marginLeft: 20 }}>
+              <div className="guideline-text">
+                <ul className="guideline-list">
                   <li>Deleted users are <strong>soft-deleted</strong> in the database (not permanently removed).</li>
                   <li>The list above shows users deleted from <strong>audit logs</strong>.</li>
                   <li>Use the <strong>Restore</strong> button to reactivate a deleted user account.</li>

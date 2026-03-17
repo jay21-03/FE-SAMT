@@ -56,6 +56,14 @@ vi.mock('../../hooks/useProjectConfigs', () => ({
 }))
 
 describe('Reports page', () => {
+  const reportResponsesByStatus = () => ({
+    ALL: { data: { content: [], totalPages: 0, totalElements: 0 }, isLoading: false, isFetching: false, refetch: refetchReportsMock },
+    COMPLETED: { data: { content: [], totalPages: 0, totalElements: 0 }, isLoading: false, isFetching: false, refetch: refetchReportsMock },
+    PROCESSING: { data: { content: [], totalPages: 0, totalElements: 0 }, isLoading: false, isFetching: false, refetch: refetchReportsMock },
+    PENDING: { data: { content: [], totalPages: 0, totalElements: 0 }, isLoading: false, isFetching: false, refetch: refetchReportsMock },
+    FAILED: { data: { content: [], totalPages: 0, totalElements: 0 }, isLoading: false, isFetching: false, refetch: refetchReportsMock },
+  })
+
   beforeEach(() => {
     useReportsMock.mockReset()
     useGenerateReportMock.mockReset()
@@ -69,11 +77,9 @@ describe('Reports page', () => {
     generateMutateAsyncMock.mockReset()
     downloadMutateAsyncMock.mockReset()
 
-    useReportsMock.mockReturnValue({
-      data: { content: [], totalPages: 0, totalElements: 0 },
-      isLoading: false,
-      isFetching: false,
-      refetch: refetchReportsMock,
+    useReportsMock.mockImplementation((query) => {
+      const key = query?.status || 'ALL'
+      return reportResponsesByStatus()[key] ?? reportResponsesByStatus().ALL
     })
 
     useProfileMock.mockReturnValue({
@@ -113,11 +119,22 @@ describe('Reports page', () => {
   })
 
   it('renders loading state while fetching reports', () => {
-    useReportsMock.mockReturnValue({
-      data: { content: [], totalPages: 0, totalElements: 0 },
-      isLoading: true,
-      isFetching: false,
-      refetch: refetchReportsMock,
+    useReportsMock.mockImplementation((query) => {
+      const key = query?.status || 'ALL'
+      if (key === 'ALL') {
+        return {
+          data: { content: [], totalPages: 0, totalElements: 0 },
+          isLoading: true,
+          isFetching: false,
+          refetch: refetchReportsMock,
+        }
+      }
+      return {
+        data: { content: [], totalPages: 0, totalElements: 0 },
+        isLoading: false,
+        isFetching: false,
+        refetch: refetchReportsMock,
+      }
     })
 
     render(<Reports />)
@@ -138,7 +155,7 @@ describe('Reports page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'COMPLETED' }))
 
     await waitFor(() => {
-      expect(useReportsMock).toHaveBeenLastCalledWith({ page: 0, size: 10, status: 'COMPLETED' })
+      expect(useReportsMock).toHaveBeenCalledWith({ page: 0, size: 10, status: 'COMPLETED' })
     })
   })
 
@@ -169,15 +186,34 @@ describe('Reports page', () => {
   })
 
   it('shows download error when download fails', async () => {
-    useReportsMock.mockReturnValue({
-      data: {
-        content: [{ reportId: 'r-1', fileName: 'SRS.docx', type: 'SRS', status: 'COMPLETED', createdAt: '2026-03-10T10:00:00.000Z' }],
-        totalPages: 1,
-        totalElements: 1,
-      },
-      isLoading: false,
-      isFetching: false,
-      refetch: refetchReportsMock,
+    useReportsMock.mockImplementation((query) => {
+      const key = query?.status || 'ALL'
+      if (key === 'ALL') {
+        return {
+          data: {
+            content: [{ reportId: 'r-1', fileName: 'SRS.docx', type: 'SRS', status: 'COMPLETED', createdAt: '2026-03-10T10:00:00.000Z' }],
+            totalPages: 1,
+            totalElements: 1,
+          },
+          isLoading: false,
+          isFetching: false,
+          refetch: refetchReportsMock,
+        }
+      }
+      if (key === 'COMPLETED') {
+        return {
+          data: { content: [], totalPages: 1, totalElements: 1 },
+          isLoading: false,
+          isFetching: false,
+          refetch: refetchReportsMock,
+        }
+      }
+      return {
+        data: { content: [], totalPages: 0, totalElements: 0 },
+        isLoading: false,
+        isFetching: false,
+        refetch: refetchReportsMock,
+      }
     })
     downloadMutateAsyncMock.mockRejectedValue(new Error('download failed'))
 

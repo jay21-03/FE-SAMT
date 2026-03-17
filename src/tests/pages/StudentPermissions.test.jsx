@@ -2,28 +2,35 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudentPermissions from '../../pages/student/StudentPermissions'
 
-const mockUseUserGroups = vi.fn()
+const { useProfileMock, useUserGroupsMock } = vi.hoisted(() => ({
+  useProfileMock: vi.fn(),
+  useUserGroupsMock: vi.fn(),
+}))
 
 vi.mock('../../layout/DashboardLayout', () => ({
   default: ({ children }) => <div>{children}</div>,
 }))
 
 vi.mock('../../hooks/useAuth', () => ({
-  useProfile: () => ({
-    data: { id: 10 },
-    isLoading: false,
-  }),
+  useProfile: () => useProfileMock(),
 }))
 
 vi.mock('../../hooks/useUserGroups', () => ({
-  useUserGroups: (userId) => mockUseUserGroups(userId),
+  useUserGroups: (userId) => useUserGroupsMock(userId),
 }))
 
 describe('StudentPermissions page', () => {
   beforeEach(() => {
-    localStorage.clear()
-    mockUseUserGroups.mockReturnValue({
-      data: { groups: [] },
+    useProfileMock.mockReset()
+    useUserGroupsMock.mockReset()
+
+    useProfileMock.mockReturnValue({
+      data: { id: 21 },
+      isLoading: false,
+    })
+
+    useUserGroupsMock.mockReturnValue({
+      data: { groups: [{ groupId: 11, role: 'MEMBER', groupName: 'SE1705-G1' }] },
       isLoading: false,
     })
   })
@@ -32,7 +39,7 @@ describe('StudentPermissions page', () => {
     cleanup()
   })
 
-  it('renders default MEMBER role when group_role is missing', () => {
+  it('renders role from backend membership', () => {
     render(<StudentPermissions />)
 
     expect(screen.getByText('Current GroupRole: MEMBER')).toBeInTheDocument()
@@ -40,18 +47,9 @@ describe('StudentPermissions page', () => {
     expect(screen.getByText('Member')).toBeInTheDocument()
   })
 
-  it('renders LEADER role from current membership', async () => {
-    mockUseUserGroups.mockReturnValue({
-      data: {
-        groups: [
-          {
-            groupId: 1,
-            groupName: 'SE1701',
-            semesterCode: 'SPRING26',
-            role: 'LEADER',
-          },
-        ],
-      },
+  it('renders leader role from backend membership', () => {
+    useUserGroupsMock.mockReturnValue({
+      data: { groups: [{ groupId: 22, role: 'LEADER', groupName: 'SE1705-G2' }] },
       isLoading: false,
     })
 

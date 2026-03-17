@@ -8,6 +8,7 @@ const {
   useGroupsMock,
   useSemestersMock,
   useUsersMock,
+  useProfileMock,
   createGroupMock,
   refetchMock,
 } = vi.hoisted(() => ({
@@ -15,6 +16,7 @@ const {
   useGroupsMock: vi.fn(),
   useSemestersMock: vi.fn(),
   useUsersMock: vi.fn(),
+  useProfileMock: vi.fn(),
   createGroupMock: vi.fn(),
   refetchMock: vi.fn(),
 }))
@@ -33,6 +35,10 @@ vi.mock('../../hooks/useUserGroups', () => ({
   useGroups: (query) => useGroupsMock(query),
   useSemesters: () => useSemestersMock(),
   useUsers: (query) => useUsersMock(query),
+}))
+
+vi.mock('../../hooks/useAuth', () => ({
+  useProfile: () => useProfileMock(),
 }))
 
 vi.mock('../../api/userGroupApi', () => ({
@@ -61,14 +67,19 @@ describe('GroupList page', () => {
 
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('role', 'ADMIN')
 
     invalidateQueriesMock.mockReset()
     useGroupsMock.mockReset()
     useSemestersMock.mockReset()
     useUsersMock.mockReset()
+    useProfileMock.mockReset()
     createGroupMock.mockReset()
     refetchMock.mockReset()
+
+    useProfileMock.mockReturnValue({
+      data: { role: 'ADMIN' },
+      isLoading: false,
+    })
 
     useGroupsMock.mockReturnValue({
       data: {
@@ -109,7 +120,10 @@ describe('GroupList page', () => {
   })
 
   it('hides create button for non-admin role', () => {
-    localStorage.setItem('role', 'LECTURER')
+    useProfileMock.mockReturnValue({
+      data: { role: 'LECTURER' },
+      isLoading: false,
+    })
     renderPage()
 
     expect(screen.queryByRole('button', { name: 'Create Group' })).not.toBeInTheDocument()

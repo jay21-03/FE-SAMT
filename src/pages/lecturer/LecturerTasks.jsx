@@ -1,19 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import { useRecentActivities, useGroupProgress } from "../../hooks/useReport";
-import { useProfile } from "../../hooks/useAuth";
 import { useGroups, useSemesters } from "../../hooks/useUserGroups";
 
 export default function LecturerTasks() {
-  const navigate = useNavigate();
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [sourceFilter, setSourceFilter] = useState("ALL");
   const [page, setPage] = useState(0);
-  const { data: profile } = useProfile();
 
   // Fetch semesters
   const { data: semestersData } = useSemesters();
@@ -24,13 +20,11 @@ export default function LecturerTasks() {
     page: 0,
     size: 100,
     semesterId: selectedSemester ? Number(selectedSemester) : undefined,
-    lecturerId: profile?.id,
-  }, { enabled: !!profile?.id });
+  });
   const groups = groupsData?.content || [];
-  const hasSelectedGroup = selectedGroupId && groups.some((g) => g.id === Number(selectedGroupId));
 
   // Get active group
-  const activeGroupId = hasSelectedGroup ? Number(selectedGroupId) : (groups[0]?.id || 0);
+  const activeGroupId = selectedGroupId ? Number(selectedGroupId) : (groups[0]?.id || 0);
 
   // Fetch group progress for stats - only if activeGroupId is valid
   const { data: progress } = useGroupProgress(activeGroupId);
@@ -47,19 +41,12 @@ export default function LecturerTasks() {
 
   const isLoading = groupsLoading || activitiesLoading;
 
-  const getTypeColor = (type) => {
-    switch (type?.toLowerCase()) {
-      case "issue":
-      case "task":
-        return { bg: "#e6f0ff", color: "#0052cc" };
-      case "commit":
-        return { bg: "#f0fdf4", color: "#059669" };
-      case "pull_request":
-      case "pr":
-        return { bg: "#faf5ff", color: "#7c3aed" };
-      default:
-        return { bg: "#f3f4f6", color: "#374151" };
-    }
+  const getTypeClass = (type) => {
+    const normalized = type?.toLowerCase();
+    if (normalized === "issue" || normalized === "task") return "issue";
+    if (normalized === "commit") return "commit";
+    if (normalized === "pull_request" || normalized === "pr") return "pr";
+    return "default";
   };
 
   const columns = [
@@ -72,12 +59,12 @@ export default function LecturerTasks() {
             href={row.url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "#0066cc", textDecoration: "none", fontWeight: 500 }}
+            className="lecturer-link lecturer-link-strong"
           >
             {row.title}
           </a>
           {row.externalId && (
-            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>
+            <div className="lecturer-activity-id">
               {row.externalId}
             </div>
           )}
@@ -88,15 +75,7 @@ export default function LecturerTasks() {
       key: "source",
       header: "Source",
       render: (row) => (
-        <span
-          style={{
-            fontSize: 11,
-            padding: "2px 8px",
-            borderRadius: 4,
-            background: row.source === "JIRA" ? "#e6f0ff" : "#f0f0f0",
-            color: row.source === "JIRA" ? "#0052cc" : "#24292e",
-          }}
-        >
+        <span className={`lecturer-source-badge ${row.source === "JIRA" ? "jira" : "github"}`}>
           {row.source}
         </span>
       ),
@@ -105,17 +84,8 @@ export default function LecturerTasks() {
       key: "type",
       header: "Type",
       render: (row) => {
-        const colors = getTypeColor(row.type);
         return (
-          <span
-            style={{
-              fontSize: 11,
-              padding: "2px 8px",
-              borderRadius: 4,
-              background: colors.bg,
-              color: colors.color,
-            }}
-          >
+          <span className={`lecturer-type-badge ${getTypeClass(row.type)}`}>
             {row.type}
           </span>
         );
@@ -124,13 +94,13 @@ export default function LecturerTasks() {
     {
       key: "author",
       header: "Author",
-      render: (row) => <span style={{ fontSize: 13 }}>{row.author}</span>,
+      render: (row) => <span className="lecturer-author">{row.author}</span>,
     },
     {
       key: "occurredAt",
       header: "Time",
       render: (row) => (
-        <span style={{ fontSize: 12, color: "#6b7280" }}>
+        <span className="text-muted-sm">
           {row.occurredAt
             ? new Date(row.occurredAt).toLocaleString("en-US", {
                 dateStyle: "short",
@@ -164,31 +134,34 @@ export default function LecturerTasks() {
           <Link className="tab" to="/app/lecturer/github-stats">
             GitHub Stats
           </Link>
+          <Link className="tab" to="/app/lecturer/grading">
+            Grading
+          </Link>
         </div>
 
         {/* Stats from Progress */}
         {progress && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, marginTop: 16 }}>
-            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
-              <div className="stat-value" style={{ fontSize: 24, color: "#f59e0b" }}>
+          <div className="lecturer-metrics-grid">
+            <div className="stat-card lecturer-metrics-card">
+              <div className="stat-value lecturer-metrics-value lecturer-stat-todo">
                 {progress.todoCount}
               </div>
               <div className="stat-label">To Do</div>
             </div>
-            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
-              <div className="stat-value" style={{ fontSize: 24, color: "#3b82f6" }}>
+            <div className="stat-card lecturer-metrics-card">
+              <div className="stat-value lecturer-metrics-value lecturer-stat-pr">
                 {progress.inProgressCount}
               </div>
               <div className="stat-label">In Progress</div>
             </div>
-            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
-              <div className="stat-value" style={{ fontSize: 24, color: "#10b981" }}>
+            <div className="stat-card lecturer-metrics-card">
+              <div className="stat-value lecturer-metrics-value lecturer-stat-completed">
                 {progress.doneCount}
               </div>
               <div className="stat-label">Done</div>
             </div>
-            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
-              <div className="stat-value" style={{ fontSize: 24 }}>
+            <div className="stat-card lecturer-metrics-card">
+              <div className="stat-value lecturer-metrics-value">
                 {Math.round(progress.completionRate * 100)}%
               </div>
               <div className="stat-label">Completion</div>
@@ -197,12 +170,12 @@ export default function LecturerTasks() {
         )}
 
         {/* Filters */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Filters</h3>
           </div>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "12px 0" }}>
-            <label className="modal-field" style={{ margin: 0, minWidth: 150 }}>
+          <div className="lecturer-filters-row">
+            <label className="modal-field lecturer-filter-semester">
               <span>Semester</span>
               <select
                 value={selectedSemester}
@@ -220,7 +193,7 @@ export default function LecturerTasks() {
                 ))}
               </select>
             </label>
-            <label className="modal-field" style={{ margin: 0, minWidth: 200 }}>
+            <label className="modal-field lecturer-filter-group">
               <span>Group</span>
               <select
                 value={selectedGroupId}
@@ -240,15 +213,7 @@ export default function LecturerTasks() {
                 )}
               </select>
             </label>
-            <button
-              className="primary-button secondary"
-              onClick={() => activeGroupId > 0 && navigate(`/app/groups/${activeGroupId}`)}
-              disabled={activeGroupId <= 0}
-              style={{ alignSelf: "flex-end" }}
-            >
-              View Group
-            </button>
-            <label className="modal-field" style={{ margin: 0 }}>
+            <label className="modal-field field-reset">
               <span>Source</span>
               <select
                 value={sourceFilter}
@@ -266,7 +231,7 @@ export default function LecturerTasks() {
         </div>
 
         {/* Results Info */}
-        <div style={{ marginTop: 16, marginBottom: 8, color: "#6b7280", fontSize: 13 }}>
+        <div className="lecturer-results-info">
           {totalElements > 0
             ? `Showing ${page * 20 + 1}-${Math.min((page + 1) * 20, totalElements)} of ${totalElements} activities`
             : "No activities found"}

@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
-import { useProfile } from "../../hooks/useAuth";
 import {
   useCreateProjectConfig,
   useProjectConfigByGroup,
   useUpdateProjectConfig,
   useVerifyProjectConfig,
 } from "../../hooks/useProjectConfigs";
+import { useProfile } from "../../hooks/useAuth";
 import { useGroup } from "../../hooks/useUserGroups";
 import { useSyncJira, useSyncGithub, useSyncAll, useSyncJobs } from "../../hooks/useSync";
 
@@ -17,8 +17,8 @@ export default function ProjectConfig() {
   const parsedGroupId = Number(groupId);
   const hasValidGroupId = Number.isInteger(parsedGroupId) && parsedGroupId > 0;
   const groupIdNumber = hasValidGroupId ? parsedGroupId : 0;
-  const role = localStorage.getItem("role");
   const { data: profile } = useProfile();
+  const role = profile?.role || profile?.roles?.[0] || null;
 
   const { data, isLoading } = useProjectConfigByGroup(groupIdNumber, { enabled: hasValidGroupId });
   const { data: group } = useGroup(groupIdNumber);
@@ -74,12 +74,6 @@ export default function ProjectConfig() {
     overrides.jiraHostUrl,
   ]);
 
-  const isAdmin = role === "ADMIN";
-  const isGroupLeader = Boolean(
-    profile?.id && group?.members?.some((member) => member.userId === profile.id && member.role === "LEADER")
-  );
-  const canManageConfig = isAdmin || isGroupLeader;
-
   const toTrimmedPayload = (values) => {
     return Object.fromEntries(
       Object.entries(values)
@@ -97,10 +91,6 @@ export default function ProjectConfig() {
 
   const handleSave = async () => {
     if (!hasValidGroupId) return;
-    if (!canManageConfig) {
-      setSaveError("You do not have permission to modify this configuration. Only ADMIN or group LEADER can update.");
-      return;
-    }
     setValidationError(null);
     setSaveError(null);
 
@@ -136,20 +126,12 @@ export default function ProjectConfig() {
 
   const handleVerify = async () => {
     if (!data?.data?.id) return;
-    if (!canManageConfig) {
-      setValidationError("You do not have permission to verify this configuration.");
-      return;
-    }
     await verifyConfig.mutateAsync(data.data.id);
   };
 
   // Sync handlers
   const handleSyncJira = async () => {
     if (!projectConfigId) return;
-    if (!canManageConfig) {
-      setSyncError("You do not have permission to run sync for this configuration.");
-      return;
-    }
     setSyncMessage(null);
     setSyncError(null);
     try {
@@ -164,10 +146,6 @@ export default function ProjectConfig() {
 
   const handleSyncGithub = async () => {
     if (!projectConfigId) return;
-    if (!canManageConfig) {
-      setSyncError("You do not have permission to run sync for this configuration.");
-      return;
-    }
     setSyncMessage(null);
     setSyncError(null);
     try {
@@ -182,10 +160,6 @@ export default function ProjectConfig() {
 
   const handleSyncAll = async () => {
     if (!projectConfigId) return;
-    if (!canManageConfig) {
-      setSyncError("You do not have permission to run sync for this configuration.");
-      return;
-    }
     setSyncMessage(null);
     setSyncError(null);
     try {
@@ -230,9 +204,9 @@ export default function ProjectConfig() {
     return (
       <DashboardLayout>
         <div className="admin-dashboard">
-          <div className="panel" style={{ padding: 40, textAlign: "center" }}>
-            <h2 style={{ color: "#dc2626", marginBottom: 12 }}>Invalid Group</h2>
-            <p style={{ color: "#6b7280", marginBottom: 20 }}>
+          <div className="panel panel-center-lg">
+            <h2 className="project-config-invalid-title">Invalid Group</h2>
+            <p className="project-config-invalid-text">
               Missing or invalid group id in URL.
             </p>
             <button className="primary-button" onClick={() => navigate("/app/groups")}>Back to Groups</button>
@@ -250,9 +224,9 @@ export default function ProjectConfig() {
             <button className="back-button" onClick={handleBack}>
               ← Back
             </button>
-            <h1 className="page-title" style={{ marginTop: 8 }}>
+            <h1 className="page-title page-title-mt-8">
               Project Configuration
-              {group && <span style={{ fontWeight: 400, color: "#6b7280" }}> - {group.groupName}</span>}
+              {group && <span className="project-config-group-name"> - {group.groupName}</span>}
             </h1>
             <p className="page-subtitle">
               {group 
@@ -268,11 +242,6 @@ export default function ProjectConfig() {
             <div className="panel-header">
               <h3>Jira Settings</h3>
             </div>
-            {!canManageConfig && (
-              <div className="alert" style={{ marginBottom: 12 }}>
-                Read-only mode: only ADMIN or group LEADER can save/verify/sync this project configuration.
-              </div>
-            )}
             <div className="profile-form">
               <label>
                 <span>Jira Host URL</span>
@@ -281,7 +250,7 @@ export default function ProjectConfig() {
                   value={form.jiraHostUrl}
                   onChange={handleChange("jiraHostUrl")}
                   placeholder="https://your-domain.atlassian.net"
-                  disabled={isLoading || !canManageConfig}
+                  disabled={isLoading}
                 />
               </label>
               <label>
@@ -291,7 +260,7 @@ export default function ProjectConfig() {
                   value={form.jiraEmail}
                   onChange={handleChange("jiraEmail")}
                   placeholder="you@example.com"
-                  disabled={isLoading || !canManageConfig}
+                  disabled={isLoading}
                 />
               </label>
               <label>
@@ -301,7 +270,7 @@ export default function ProjectConfig() {
                   value={form.jiraApiToken}
                   onChange={handleChange("jiraApiToken")}
                   placeholder="jira_***"
-                  disabled={isLoading || !canManageConfig}
+                  disabled={isLoading}
                 />
               </label>
             </div>
@@ -319,7 +288,7 @@ export default function ProjectConfig() {
                   value={form.githubRepoUrl}
                   onChange={handleChange("githubRepoUrl")}
                   placeholder="https://github.com/org/repo"
-                  disabled={isLoading || !canManageConfig}
+                  disabled={isLoading}
                 />
               </label>
               <label>
@@ -329,14 +298,14 @@ export default function ProjectConfig() {
                   value={form.githubToken}
                   onChange={handleChange("githubToken")}
                   placeholder="ghp_***"
-                  disabled={isLoading || !canManageConfig}
+                  disabled={isLoading}
                 />
               </label>
             </div>
           </div>
         </div>
 
-        <div className="admin-system-row" style={{ marginTop: 16 }}>
+        <div className="admin-system-row panel-mt-16">
           <div className="panel">
             <div className="panel-header">
               <h3>Verification</h3>
@@ -348,14 +317,14 @@ export default function ProjectConfig() {
               </div>
               {validationError && <div className="alert alert-error">{validationError}</div>}
               {saveError && <div className="alert alert-error">{saveError}</div>}
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="primary-button" onClick={handleSave} disabled={isSaving || !canManageConfig}>
+              <div className="flex-row-8">
+                <button className="primary-button" onClick={handleSave} disabled={isSaving}>
                   {isSaving ? "Saving..." : "Save Config"}
                 </button>
                 <button
                   className="primary-button secondary"
                   onClick={handleVerify}
-                  disabled={!data?.data?.id || verifyConfig.isPending || !canManageConfig}
+                  disabled={!data?.data?.id || verifyConfig.isPending}
                 >
                   {verifyConfig.isPending ? "Verifying..." : "Verify Connection"}
                 </button>
@@ -366,7 +335,7 @@ export default function ProjectConfig() {
 
         {/* Sync Panel - Only show if config is verified */}
         {stateLabel === "VERIFIED" && (
-          <div className="panel" style={{ marginTop: 16 }}>
+          <div className="panel panel-mt-16">
             <div className="panel-header">
               <h3>Data Synchronization</h3>
             </div>
@@ -376,31 +345,29 @@ export default function ProjectConfig() {
             {syncError && <div className="alert alert-error">{syncError}</div>}
 
             <div className="profile-form">
-              <p style={{ color: "#6b7280", fontSize: 14, marginBottom: 16 }}>
+              <p className="project-config-sync-desc">
                 Sync data from Jira and GitHub to keep your project metrics up-to-date.
               </p>
               
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div className="project-config-sync-actions">
                 <button
-                  className="action-button"
+                  className="action-button sync-jira"
                   onClick={handleSyncJira}
-                  disabled={isSyncing || !canManageConfig}
-                  style={{ background: "#0052cc", color: "white" }}
+                  disabled={isSyncing}
                 >
                   {syncJira.isPending ? "Syncing Jira..." : "Sync Jira Issues"}
                 </button>
                 <button
-                  className="action-button"
+                  className="action-button sync-github"
                   onClick={handleSyncGithub}
-                  disabled={isSyncing || !canManageConfig}
-                  style={{ background: "#24292e", color: "white" }}
+                  disabled={isSyncing}
                 >
                   {syncGithub.isPending ? "Syncing GitHub..." : "Sync GitHub Commits"}
                 </button>
                 <button
                   className="primary-button"
                   onClick={handleSyncAll}
-                  disabled={isSyncing || !canManageConfig}
+                  disabled={isSyncing}
                 >
                   {syncAll.isPending ? "Syncing All..." : "Sync All"}
                 </button>
@@ -409,8 +376,8 @@ export default function ProjectConfig() {
 
             {/* Recent Sync Jobs */}
             {syncJobsData?.content?.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: "#374151" }}>
+              <div className="panel-mt-16">
+                <h4 className="project-config-jobs-title">
                   Recent Sync Jobs
                 </h4>
                 <table className="data-table">
@@ -426,11 +393,7 @@ export default function ProjectConfig() {
                     {syncJobsData.content.map((job) => (
                       <tr key={job.syncJobId}>
                         <td>
-                          <span style={{ 
-                            fontSize: 12, 
-                            fontWeight: 500,
-                            color: job.jobType === "JIRA_ISSUES" ? "#0052cc" : "#24292e"
-                          }}>
+                          <span className={`project-config-job-type ${job.jobType === "JIRA_ISSUES" ? "jira" : "github"}`}>
                             {job.jobType === "JIRA_ISSUES" ? "Jira" : "GitHub"}
                           </span>
                         </td>
@@ -443,10 +406,10 @@ export default function ProjectConfig() {
                             {job.status}
                           </span>
                         </td>
-                        <td style={{ fontSize: 12, color: "#6b7280" }}>
+                        <td className="text-muted-sm">
                           {job.recordsFetched ?? 0} / {job.recordsSaved ?? 0}
                         </td>
-                        <td style={{ fontSize: 12, color: "#6b7280" }}>
+                        <td className="text-muted-sm">
                           {job.completedAt 
                             ? new Date(job.completedAt).toLocaleString("en-US", { 
                                 dateStyle: "short", 
@@ -466,16 +429,16 @@ export default function ProjectConfig() {
 
         {/* Info Panel for non-verified configs */}
         {stateLabel !== "VERIFIED" && (
-          <div className="panel" style={{ marginTop: 16 }}>
+          <div className="panel panel-mt-16">
             <div className="panel-header">
               <h3>Data Synchronization</h3>
             </div>
-            <div style={{ padding: "16px 0", color: "#6b7280", fontSize: 14 }}>
-              <p style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 18 }}>⚠️</span>
+            <div className="project-config-sync-note">
+              <p className="project-config-warning-line">
+                <span className="project-config-warning-icon">⚠️</span>
                 Configuration must be <strong>VERIFIED</strong> before you can sync data.
               </p>
-              <p style={{ marginTop: 8 }}>
+              <p className="project-config-note-detail">
                 Please save your configuration and click "Verify Connection" to test the credentials.
               </p>
             </div>

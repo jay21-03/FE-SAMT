@@ -122,34 +122,16 @@ export default function ProjectConfigList() {
         </div>
 
         {/* Tabs */}
-        <div className="tabs" style={{ marginBottom: 16, display: "flex", gap: 0, borderBottom: "1px solid #e5e7eb" }}>
+        <div className="tabs">
           <button
             className={`tab-button ${activeTab === "active" ? "active" : ""}`}
             onClick={() => setActiveTab("active")}
-            style={{
-              padding: "10px 20px",
-              border: "none",
-              background: activeTab === "active" ? "#0066cc" : "transparent",
-              color: activeTab === "active" ? "white" : "#374151",
-              cursor: "pointer",
-              fontWeight: 500,
-              borderRadius: "6px 6px 0 0",
-            }}
           >
             Active Groups ({rows.length})
           </button>
           <button
-            className={`tab-button ${activeTab === "deleted" ? "active" : ""}`}
+            className={`tab-button tab-danger ${activeTab === "deleted" ? "active" : ""}`}
             onClick={() => setActiveTab("deleted")}
-            style={{
-              padding: "10px 20px",
-              border: "none",
-              background: activeTab === "deleted" ? "#dc2626" : "transparent",
-              color: activeTab === "deleted" ? "white" : "#374151",
-              cursor: "pointer",
-              fontWeight: 500,
-              borderRadius: "6px 6px 0 0",
-            }}
           >
             Deleted Configs ({deletedConfigs.length})
           </button>
@@ -162,7 +144,7 @@ export default function ProjectConfigList() {
         {activeTab === "active" ? (
           <>
             {/* Active Configs Tab */}
-            <div className="filter-row" style={{ gap: 12 }}>
+            <div className="filter-row filter-row-gap-12">
               <DebouncedSearchInput
                 placeholder="Search group or lecturer..."
                 onChange={(value) => setSearch(value)}
@@ -188,17 +170,17 @@ export default function ProjectConfigList() {
               emptyMessage="No groups found."
             />
 
-            <div className="panel" style={{ marginTop: 16 }}>
+            <div className="panel panel-mt-16">
               <div className="panel-header">
                 <h3>Guidelines</h3>
               </div>
-              <div style={{ padding: "12px 0", color: "#6b7280", fontSize: 14, lineHeight: 1.6 }}>
+              <div className="guideline-text">
                 <p><strong>Project Configuration</strong> allows connecting groups with Jira and GitHub:</p>
-                <ul style={{ marginTop: 8, marginLeft: 20 }}>
+                <ul className="guideline-list panel-mt-16">
                   <li><strong>Jira:</strong> Host URL, Email, API Token to sync issues and sprints</li>
                   <li><strong>GitHub:</strong> Repository URL, Personal Access Token to sync commits and PRs</li>
                 </ul>
-                <p style={{ marginTop: 12 }}>
+                <p className="panel-mt-16">
                   Click <strong>"Configure"</strong> to set up or edit configuration for each group.
                 </p>
               </div>
@@ -207,12 +189,12 @@ export default function ProjectConfigList() {
         ) : (
           <>
             {/* Deleted Configs Tab */}
-            <div className="panel" style={{ marginBottom: 16 }}>
+            <div className="panel panel-mb-16">
               <div className="panel-header">
                 <h3>Restore Config by ID</h3>
               </div>
-              <div style={{ display: "flex", gap: 12, alignItems: "flex-end", padding: "12px 0" }}>
-                <label className="modal-field" style={{ margin: 0, flex: 1 }}>
+              <div className="flex-row-12-end py-12">
+                <label className="modal-field field-flex-1">
                   <span>Config ID (UUID)</span>
                   <input
                     type="text"
@@ -223,15 +205,14 @@ export default function ProjectConfigList() {
                   />
                 </label>
                 <button
-                  className="action-button success"
+                  className="action-button success compact-button"
                   onClick={() => handleRestoreConfig(restoreConfigId)}
                   disabled={restoreLoading || !restoreConfigId}
-                  style={{ height: 38 }}
                 >
                   {restoreLoading ? "Restoring..." : "Restore"}
                 </button>
               </div>
-              <p style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}>
+              <p className="text-muted-sm">
                 If you know the Config ID (UUID), enter it above to restore. Otherwise, find the config in the list below.
               </p>
             </div>
@@ -241,7 +222,7 @@ export default function ProjectConfigList() {
                 <h3>Recently Deleted Configs</h3>
               </div>
               {deletedConfigs.length === 0 ? (
-                <p style={{ padding: 16, color: "#6b7280", textAlign: "center" }}>
+                <p className="table-empty-cell text-muted">
                   No deleted configs found in recent audit logs (last 90 days).
                 </p>
               ) : (
@@ -258,7 +239,7 @@ export default function ProjectConfigList() {
                     {deletedConfigs.map((config, idx) => (
                       <tr key={`deleted-${config.id}-${idx}`}>
                         <td>
-                          <span style={{ fontFamily: "monospace", fontSize: 11 }} title={config.id}>
+                          <span className="reports-id" title={config.id}>
                             {config.id?.length > 20 ? `${config.id.substring(0, 20)}...` : config.id}
                           </span>
                         </td>
@@ -271,8 +252,7 @@ export default function ProjectConfigList() {
                         <td>{config.deletedBy}</td>
                         <td>
                           <button
-                            className="action-button success"
-                            style={{ padding: "4px 12px", fontSize: 12 }}
+                            className="action-button success compact-button"
                             onClick={() => handleRestoreConfig(config.id)}
                             disabled={restoreLoading}
                           >
@@ -286,12 +266,12 @@ export default function ProjectConfigList() {
               )}
             </div>
 
-            <div className="panel" style={{ marginTop: 16 }}>
+            <div className="panel panel-mt-16">
               <div className="panel-header">
                 <h3>About Deleted Configs</h3>
               </div>
-              <div style={{ padding: "12px 0", color: "#6b7280", fontSize: 14, lineHeight: 1.6 }}>
-                <ul style={{ marginLeft: 20 }}>
+              <div className="guideline-text">
+                <ul className="guideline-list">
                   <li>Deleted configs are <strong>soft-deleted</strong> in the database (not permanently removed).</li>
                   <li>The list above shows configs deleted from <strong>audit logs</strong> (last 90 days).</li>
                   <li>Use the <strong>Restore</strong> button to reactivate a deleted configuration.</li>

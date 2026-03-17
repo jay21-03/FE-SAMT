@@ -70,7 +70,7 @@ export default function UserProfile() {
     return (
       <DashboardLayout>
         <div className="admin-dashboard">
-          <div className="panel" style={{ padding: 40, textAlign: "center" }}>
+          <div className="panel panel-center-lg">
             <p>Loading profile...</p>
           </div>
         </div>
@@ -82,9 +82,9 @@ export default function UserProfile() {
     return (
       <DashboardLayout>
         <div className="admin-dashboard">
-          <div className="panel" style={{ padding: 40, textAlign: "center" }}>
-            <h2 style={{ color: "#dc2626", marginBottom: 16 }}>Failed to load profile</h2>
-            <p style={{ color: "#6b7280", marginBottom: 20 }}>
+          <div className="panel panel-center-lg">
+            <h2 className="text-danger">Failed to load profile</h2>
+            <p className="text-muted panel-mb-16">
               Please try again or contact support.
             </p>
             <button className="primary-button" onClick={() => navigate(-1)}>
@@ -156,14 +156,14 @@ export default function UserProfile() {
                 <span className="info-value">{profile.githubUsername || "Not linked"}</span>
               </div>
             </div>
-            <p style={{ color: "#6b7280", fontSize: 12, marginTop: 12 }}>
+            <p className="text-muted-sm panel-mt-16">
               External accounts can only be updated by administrators.
             </p>
           </div>
         </div>
 
         {/* Editable Profile Form */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Edit Profile</h3>
           </div>
@@ -188,7 +188,7 @@ export default function UserProfile() {
                 disabled={isSaving}
               />
             </label>
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <div className="profile-action-row">
               <button className="primary-button" onClick={handleSave} disabled={isSaving}>
                 {isSaving ? "Saving..." : "Save Changes"}
               </button>

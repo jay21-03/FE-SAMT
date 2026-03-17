@@ -49,8 +49,8 @@ export default function LecturerGrading() {
       header: "Student",
       render: (row) => (
         <div>
-          <span style={{ fontWeight: 500 }}>{row.fullName}</span>
-          <div style={{ fontSize: 11, color: "#6b7280" }}>{row.email}</div>
+          <span className="lecturer-student-name">{row.fullName}</span>
+          <div className="lecturer-student-email">{row.email}</div>
         </div>
       ),
     },
@@ -58,15 +58,7 @@ export default function LecturerGrading() {
       key: "role",
       header: "Role",
       render: (row) => (
-        <span
-          style={{
-            fontSize: 11,
-            padding: "2px 8px",
-            borderRadius: 4,
-            background: row.role === "LEADER" ? "#fef3c7" : "#f3f4f6",
-            color: row.role === "LEADER" ? "#d97706" : "#374151",
-          }}
-        >
+        <span className={`lecturer-role-badge ${row.role === "LEADER" ? "leader" : "member"}`}>
           {row.role}
         </span>
       ),
@@ -75,7 +67,7 @@ export default function LecturerGrading() {
       key: "joinedAt",
       header: "Joined",
       render: (row) => (
-        <span style={{ fontSize: 12, color: "#6b7280" }}>
+        <span className="text-muted-sm">
           {row.joinedAt
             ? new Date(row.joinedAt).toLocaleDateString("en-US")
             : "-"}
@@ -86,7 +78,7 @@ export default function LecturerGrading() {
       key: "grade",
       header: "Grade",
       render: () => (
-        <span style={{ color: "#9ca3af", fontStyle: "italic", fontSize: 12 }}>
+        <span className="lecturer-grade-placeholder">
           Not available
         </span>
       ),
@@ -121,12 +113,12 @@ export default function LecturerGrading() {
         </div>
 
         {/* Filters */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Select Group</h3>
           </div>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "12px 0" }}>
-            <label className="modal-field" style={{ margin: 0, minWidth: 150 }}>
+          <div className="lecturer-filters-row">
+            <label className="modal-field lecturer-filter-semester">
               <span>Semester</span>
               <select
                 value={selectedSemester}
@@ -143,7 +135,7 @@ export default function LecturerGrading() {
                 ))}
               </select>
             </label>
-            <label className="modal-field" style={{ margin: 0, minWidth: 200 }}>
+            <label className="modal-field lecturer-filter-group">
               <span>Group</span>
               <select
                 value={selectedGroupId}
@@ -165,21 +157,21 @@ export default function LecturerGrading() {
 
         {/* Group Progress Stats */}
         {progress && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12, marginTop: 16 }}>
-            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
-              <div className="stat-value" style={{ fontSize: 20 }}>
+          <div className="lecturer-metrics-grid">
+            <div className="stat-card lecturer-metrics-card">
+              <div className="stat-value lecturer-metrics-value">
                 {members.length}
               </div>
               <div className="stat-label">Members</div>
             </div>
-            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
-              <div className="stat-value" style={{ fontSize: 20, color: "#10b981" }}>
+            <div className="stat-card lecturer-metrics-card">
+              <div className="stat-value lecturer-metrics-value lecturer-stat-completed">
                 {progress.doneCount}
               </div>
               <div className="stat-label">Tasks Done</div>
             </div>
-            <div className="stat-card" style={{ padding: 12, textAlign: "center" }}>
-              <div className="stat-value" style={{ fontSize: 20 }}>
+            <div className="stat-card lecturer-metrics-card">
+              <div className="stat-value lecturer-metrics-value">
                 {Math.round(progress.completionRate * 100)}%
               </div>
               <div className="stat-label">Completion</div>
@@ -188,11 +180,11 @@ export default function LecturerGrading() {
         )}
 
         {/* Members Table */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Group Members</h3>
             {activeGroup && (
-              <span style={{ fontSize: 12, color: "#6b7280" }}>
+              <span className="text-muted-sm">
                 {activeGroup.groupName}
               </span>
             )}
@@ -211,17 +203,17 @@ export default function LecturerGrading() {
         </div>
 
         {/* Info Panel */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>About Grading</h3>
           </div>
-          <div style={{ padding: "12px 0", color: "#6b7280", fontSize: 14, lineHeight: 1.6 }}>
-            <div style={{ background: "#fef3c7", padding: 12, borderRadius: 8, marginBottom: 12 }}>
-              <strong style={{ color: "#d97706" }}>Note:</strong> The grading feature is currently not available in the backend API.
+          <div className="guideline-text">
+            <div className="lecturer-note-box">
+              <strong className="lecturer-note-title">Note:</strong> The grading feature is currently not available in the backend API.
               This page shows group members for reference.
             </div>
             <p>To evaluate students, consider:</p>
-            <ul style={{ marginTop: 8, marginLeft: 20 }}>
+            <ul className="guideline-list panel-mt-16">
               <li><strong>Tasks:</strong> View task completion in the Tasks tab</li>
               <li><strong>GitHub Stats:</strong> Check commit and PR activity in GitHub Stats tab</li>
               <li><strong>Reports:</strong> Generate SRS reports to assess project documentation</li>

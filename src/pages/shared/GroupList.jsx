@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../../layout/DashboardLayout";
@@ -6,18 +6,14 @@ import DataTable from "../../components/DataTable";
 import DebouncedSearchInput from "../../components/DebouncedSearchInput";
 import { useGroups, useSemesters, useUsers } from "../../hooks/useUserGroups";
 import { useProfile } from "../../hooks/useAuth";
-import { useUserGroups } from "../../hooks/useUserGroups";
-import { getAccessTokenUserId } from "../../utils/authToken";
 import { userGroupApi } from "../../api/userGroupApi";
 
 export default function GroupList() {
   const queryClient = useQueryClient();
-  const pageSize = 20;
-  const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const [semesterFilter, setSemesterFilter] = useState("");
-  const role = localStorage.getItem("role");
-  const isStudent = role === "STUDENT";
+  const { data: profile } = useProfile();
+  const role = profile?.role || profile?.roles?.[0] || null;
 
   // Create Group Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -30,22 +26,13 @@ export default function GroupList() {
   const [createError, setCreateError] = useState(null);
   const [createSuccess, setCreateSuccess] = useState(null);
 
-  const { data, isLoading, refetch } = useGroups(
-    {
-      page,
-      size: pageSize,
-      semesterId: semesterFilter ? parseInt(semesterFilter, 10) : undefined,
-    },
-    { enabled: !isStudent }
-  );
+  const { data, isLoading, refetch } = useGroups({
+    page: 0,
+    size: 50,
+    semesterId: semesterFilter ? parseInt(semesterFilter, 10) : undefined,
+  });
   const { data: semesters } = useSemesters();
-  const { data: profile, isLoading: profileLoading } = useProfile();
-  const userId = getAccessTokenUserId() || profile?.id || 0;
-  const { data: myGroupsData, isLoading: myGroupsLoading } = useUserGroups(userId);
-  const { data: lecturersData } = useUsers(
-    { role: "LECTURER", page: 0, size: 100 },
-    { enabled: role === "ADMIN", retry: false }
-  );
+  const { data: lecturersData } = useUsers({ role: "LECTURER", page: 0, size: 100 });
 
   const lecturers = lecturersData?.content || [];
 
@@ -77,7 +64,6 @@ export default function GroupList() {
       setCreateSuccess("Group created successfully!");
       setCreateForm({ groupName: "", semesterId: "", lecturerId: "" });
 
-      setPage(0);
       queryClient.invalidateQueries({ queryKey: ["groups"] });
       refetch();
 
@@ -123,32 +109,7 @@ export default function GroupList() {
     },
   ];
 
-  const studentFilteredRows = useMemo(() => {
-    if (!isStudent) return [];
-    const keyword = search.trim().toLowerCase();
-    const semesterId = semesterFilter ? parseInt(semesterFilter, 10) : null;
-
-    const mapped = (myGroupsData?.groups || []).map((item) => ({
-      id: item.groupId,
-      name: item.groupName,
-      semester: item.semesterCode,
-      lecturer: item.lecturerName,
-      members: "-",
-      semesterId: item.semesterId,
-    }));
-
-    return mapped.filter((group) => {
-      const matchesSearch = !keyword || group.name.toLowerCase().includes(keyword);
-      const matchesSemester = !semesterId || group.semesterId === semesterId;
-      return matchesSearch && matchesSemester;
-    });
-  }, [isStudent, myGroupsData?.groups, search, semesterFilter]);
-
   const rows = useMemo(() => {
-    if (isStudent) {
-      const start = page * pageSize;
-      return studentFilteredRows.slice(start, start + pageSize);
-    }
     if (!data?.content) return [];
     const keyword = search.trim().toLowerCase();
     const mapped = data.content.map((item) => ({
@@ -160,37 +121,7 @@ export default function GroupList() {
     }));
     if (!keyword) return mapped;
     return mapped.filter((group) => group.name.toLowerCase().includes(keyword));
-  }, [isStudent, studentFilteredRows, page, data, search]);
-
-  const totalPages = isStudent
-    ? Math.max(1, Math.ceil(studentFilteredRows.length / pageSize))
-    : Math.max(1, data?.totalPages || 1);
-  const canGoPrev = page > 0;
-  const canGoNext = page + 1 < totalPages;
-  const tableLoading = isStudent ? profileLoading || myGroupsLoading : isLoading;
-
-  useEffect(() => {
-    if (tableLoading) return;
-
-    if (isStudent) {
-      if (page + 1 > totalPages) {
-        setPage(Math.max(0, totalPages - 1));
-      }
-      return;
-    }
-
-    if (typeof data?.totalPages !== "number" || data.totalPages < 1) return;
-    if (page >= data.totalPages) {
-      setPage(Math.max(0, data.totalPages - 1));
-    }
-  }, [tableLoading, isStudent, page, totalPages, data?.totalPages]);
-
-  const goToPage = (rawValue) => {
-    const parsed = parseInt(rawValue, 10);
-    if (Number.isNaN(parsed)) return;
-    const nextPage = Math.min(Math.max(parsed, 1), totalPages) - 1;
-    setPage(nextPage);
-  };
+  }, [data, search]);
 
   return (
     <DashboardLayout>
@@ -209,21 +140,15 @@ export default function GroupList() {
           )}
         </div>
 
-        <div className="filter-row" style={{ gap: 12 }}>
+        <div className="filter-row filter-row-gap-12">
           <DebouncedSearchInput
             placeholder="Search group name..."
-            onChange={(value) => {
-              setSearch(value);
-              setPage(0);
-            }}
+            onChange={(value) => setSearch(value)}
           />
           <select
             className="select-input"
             value={semesterFilter}
-            onChange={(e) => {
-              setSemesterFilter(e.target.value);
-              setPage(0);
-            }}
+            onChange={(e) => setSemesterFilter(e.target.value)}
           >
             <option value="">All semesters</option>
             {semesters?.map((sem) => (
@@ -237,54 +162,9 @@ export default function GroupList() {
         <DataTable
           columns={columns}
           data={rows}
-          loading={tableLoading}
+          loading={isLoading}
           emptyMessage="No groups found."
         />
-
-        <div
-          style={{
-            marginTop: 12,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ color: "#6b7280", fontSize: 14 }}>
-            Page {Math.min(page + 1, totalPages)} / {totalPages}
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <button
-              className="primary-button secondary"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={!canGoPrev || tableLoading}
-            >
-              Previous
-            </button>
-
-            <label style={{ color: "#6b7280", fontSize: 13 }}>Go to page</label>
-            <input
-              type="number"
-              min={1}
-              max={totalPages}
-              value={Math.min(page + 1, totalPages)}
-              onChange={(e) => goToPage(e.target.value)}
-              disabled={tableLoading}
-              style={{ width: 80 }}
-              className="select-input"
-            />
-
-            <button
-              className="primary-button secondary"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={!canGoNext || tableLoading}
-            >
-              Next
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Create Group Modal */}
@@ -313,7 +193,7 @@ export default function GroupList() {
                     disabled={createLoading}
                     required
                   />
-                  <small style={{ color: "#6b7280", fontSize: 11 }}>
+                  <small className="text-muted-xs">
                     Format: [COURSE CODE][YEAR]-G[NUMBER] (e.g., SE1705-G1)
                   </small>
                 </label>

@@ -57,7 +57,7 @@ export default function AuditLogs() {
       key: "time",
       header: "Time",
       render: (row) => (
-        <span style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+        <span className="auditlogs-time">
           {new Date(row.time).toLocaleString("en-US", {
             dateStyle: "short",
             timeStyle: "medium",
@@ -69,10 +69,10 @@ export default function AuditLogs() {
       key: "actor",
       header: "Actor",
       render: (row) => (
-        <span style={{ fontSize: 13 }}>
+        <span className="auditlogs-actor">
           {row.actor}
           {row.actorId && (
-            <span style={{ color: "#6b7280", marginLeft: 4 }}>#{row.actorId}</span>
+            <span className="auditlogs-actor-id">#{row.actorId}</span>
           )}
         </span>
       ),
@@ -104,7 +104,7 @@ export default function AuditLogs() {
       key: "resource",
       header: "Resource",
       render: (row) => (
-        <span style={{ fontSize: 13, fontFamily: "monospace" }}>{row.resource}</span>
+        <span className="auditlogs-resource">{row.resource}</span>
       ),
     },
     {
@@ -124,7 +124,7 @@ export default function AuditLogs() {
       key: "ip",
       header: "IP Address",
       render: (row) => (
-        <span style={{ fontSize: 12, fontFamily: "monospace", color: "#6b7280" }}>
+        <span className="auditlogs-ip">
           {row.ip || "-"}
         </span>
       ),
@@ -174,27 +174,19 @@ export default function AuditLogs() {
         </div>
 
         {/* Filters Panel */}
-        <div className="panel" style={{ marginBottom: 16 }}>
+        <div className="panel panel-mb-16">
           <div className="panel-header">
             <h3>Filters</h3>
             <button
-              className="primary-button secondary"
-              style={{ padding: "4px 12px", fontSize: 12 }}
+              className="primary-button secondary compact-button"
               onClick={handleClearFilters}
             >
               Clear Filters
             </button>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 16,
-              padding: "12px 0",
-            }}
-          >
+          <div className="auditlogs-filter-grid">
             {/* Filter Type */}
-            <label className="modal-field" style={{ margin: 0 }}>
+            <label className="modal-field field-reset">
               <span>Log Type</span>
               <select
                 className="select-input"
@@ -213,7 +205,7 @@ export default function AuditLogs() {
             {/* Date Range - only show for range filter */}
             {filterType === "range" && (
               <>
-                <label className="modal-field" style={{ margin: 0 }}>
+                <label className="modal-field field-reset">
                   <span>Start Date</span>
                   <input
                     type="date"
@@ -221,7 +213,7 @@ export default function AuditLogs() {
                     onChange={(e) => setStartDate(e.target.value)}
                   />
                 </label>
-                <label className="modal-field" style={{ margin: 0 }}>
+                <label className="modal-field field-reset">
                   <span>End Date</span>
                   <input
                     type="date"
@@ -234,7 +226,7 @@ export default function AuditLogs() {
 
             {/* Actor Filter - only show for actor filter */}
             {filterType === "actor" && (
-              <label className="modal-field" style={{ margin: 0 }}>
+              <label className="modal-field field-reset">
                 <span>Select User</span>
                 <select
                   className="select-input"
@@ -256,28 +248,21 @@ export default function AuditLogs() {
           </div>
 
           {filterType === "range" && (!startDate || !endDate) && (
-            <p style={{ color: "#f59e0b", fontSize: 13, marginTop: 8 }}>
+            <p className="auditlogs-warning">
               Please select both start and end dates to view logs.
             </p>
           )}
 
           {filterType === "actor" && !actorFilter && (
-            <p style={{ color: "#f59e0b", fontSize: 13, marginTop: 8 }}>
+            <p className="auditlogs-warning">
               Please select a user to view their activity logs.
             </p>
           )}
         </div>
 
         {/* Results Info */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <span style={{ color: "#6b7280", fontSize: 13 }}>
+        <div className="auditlogs-results-row">
+          <span className="auditlogs-results-text">
             {totalElements > 0
               ? `Showing ${page * pageSize + 1}-${Math.min(
                   (page + 1) * pageSize,
@@ -303,29 +288,19 @@ export default function AuditLogs() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 16,
-            }}
-          >
+          <div className="auditlogs-pagination">
             <button
-              className="primary-button secondary"
-              style={{ padding: "6px 12px" }}
+              className="primary-button secondary compact-button"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
             >
               Previous
             </button>
-            <span style={{ color: "#6b7280", fontSize: 13 }}>
+            <span className="auditlogs-results-text">
               Page {page + 1} of {totalPages}
             </span>
             <button
-              className="primary-button secondary"
-              style={{ padding: "6px 12px" }}
+              className="primary-button secondary compact-button"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
             >
@@ -335,40 +310,32 @@ export default function AuditLogs() {
         )}
 
         {/* Legend */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Action Legend</h3>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: 8,
-              padding: "12px 0",
-              fontSize: 13,
-            }}
-          >
+          <div className="auditlogs-legend-grid">
             <div>
               <strong>Authentication:</strong>
-              <div style={{ color: "#6b7280", marginTop: 4 }}>
+              <div className="auditlogs-legend-text">
                 LOGIN_SUCCESS, LOGIN_FAILED, LOGIN_DENIED, LOGOUT
               </div>
             </div>
             <div>
               <strong>Token:</strong>
-              <div style={{ color: "#6b7280", marginTop: 4 }}>
+              <div className="auditlogs-legend-text">
                 REFRESH_SUCCESS, REFRESH_REUSE, REFRESH_EXPIRED
               </div>
             </div>
             <div>
               <strong>Account:</strong>
-              <div style={{ color: "#6b7280", marginTop: 4 }}>
+              <div className="auditlogs-legend-text">
                 ACCOUNT_LOCKED, ACCOUNT_UNLOCKED, PASSWORD_CHANGE
               </div>
             </div>
             <div>
               <strong>CRUD:</strong>
-              <div style={{ color: "#6b7280", marginTop: 4 }}>
+              <div className="auditlogs-legend-text">
                 CREATE, UPDATE, SOFT_DELETE, RESTORE
               </div>
             </div>

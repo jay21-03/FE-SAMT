@@ -19,10 +19,16 @@ export default function SyncJobs() {
   }, [page, jobTypeFilter, statusFilter, configIdSearch]);
 
   const { data, isLoading, isFetching } = useSyncJobs(query);
+  const { data: completedJobsData } = useSyncJobs({ page: 0, size: 1, status: "COMPLETED" });
+  const { data: failedJobsData } = useSyncJobs({ page: 0, size: 1, status: "FAILED" });
+  const { data: runningJobsData } = useSyncJobs({ page: 0, size: 1, status: "RUNNING" });
 
   const jobs = data?.content || [];
   const totalPages = data?.totalPages || 0;
   const totalElements = data?.totalElements || 0;
+  const completedTotal = completedJobsData?.totalElements ?? 0;
+  const failedTotal = failedJobsData?.totalElements ?? 0;
+  const runningTotal = runningJobsData?.totalElements ?? 0;
 
   const getStatusClass = (status) => {
     switch (status) {
@@ -38,17 +44,14 @@ export default function SyncJobs() {
       key: "syncJobId",
       header: "Job ID",
       render: (row) => (
-        <span style={{ fontFamily: "monospace", fontWeight: 600 }}>#{row.syncJobId}</span>
+        <span className="syncjobs-job-id">#{row.syncJobId}</span>
       ),
     },
     {
       key: "projectConfigId",
       header: "Project Config",
       render: (row) => (
-        <span 
-          style={{ fontFamily: "monospace", fontSize: 11, color: "#6b7280" }}
-          title={row.projectConfigId}
-        >
+        <span className="syncjobs-config-id" title={row.projectConfigId}>
           {row.projectConfigId?.substring(0, 8)}...
         </span>
       ),
@@ -57,14 +60,7 @@ export default function SyncJobs() {
       key: "jobType",
       header: "Type",
       render: (row) => (
-        <span style={{ 
-          fontSize: 12, 
-          fontWeight: 500,
-          padding: "2px 8px",
-          borderRadius: 4,
-          background: row.jobType === "JIRA_ISSUES" ? "#e6f0ff" : "#f0f0f0",
-          color: row.jobType === "JIRA_ISSUES" ? "#0052cc" : "#24292e"
-        }}>
+        <span className={`syncjobs-type-badge ${row.jobType === "JIRA_ISSUES" ? "jira" : "github"}`}>
           {row.jobType === "JIRA_ISSUES" ? "Jira Issues" : "GitHub Commits"}
         </span>
       ),
@@ -82,10 +78,10 @@ export default function SyncJobs() {
       key: "records",
       header: "Records",
       render: (row) => (
-        <span style={{ fontSize: 12 }}>
-          <span style={{ color: "#059669" }}>{row.recordsFetched ?? 0}</span>
+        <span className="syncjobs-records">
+          <span className="syncjobs-fetched">{row.recordsFetched ?? 0}</span>
           {" / "}
-          <span style={{ color: "#0066cc" }}>{row.recordsSaved ?? 0}</span>
+          <span className="syncjobs-saved">{row.recordsSaved ?? 0}</span>
         </span>
       ),
     },
@@ -94,9 +90,9 @@ export default function SyncJobs() {
       header: "Degraded",
       render: (row) => (
         row.degraded ? (
-          <span style={{ color: "#d97706", fontSize: 12 }}>Yes</span>
+          <span className="syncjobs-degraded-yes">Yes</span>
         ) : (
-          <span style={{ color: "#6b7280", fontSize: 12 }}>No</span>
+          <span className="syncjobs-degraded-no">No</span>
         )
       ),
     },
@@ -104,7 +100,7 @@ export default function SyncJobs() {
       key: "startedAt",
       header: "Started",
       render: (row) => (
-        <span style={{ fontSize: 12, color: "#6b7280" }}>
+        <span className="syncjobs-time">
           {row.startedAt 
             ? new Date(row.startedAt).toLocaleString("en-US", { 
                 dateStyle: "short", 
@@ -119,7 +115,7 @@ export default function SyncJobs() {
       key: "completedAt",
       header: "Completed",
       render: (row) => (
-        <span style={{ fontSize: 12, color: "#6b7280" }}>
+        <span className="syncjobs-time">
           {row.completedAt 
             ? new Date(row.completedAt).toLocaleString("en-US", { 
                 dateStyle: "short", 
@@ -135,22 +131,11 @@ export default function SyncJobs() {
       header: "Error",
       render: (row) => (
         row.errorMessage ? (
-          <span 
-            style={{ 
-              fontSize: 11, 
-              color: "#dc2626", 
-              maxWidth: 150, 
-              display: "block",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap"
-            }}
-            title={row.errorMessage}
-          >
+          <span className="syncjobs-error" title={row.errorMessage}>
             {row.errorMessage}
           </span>
         ) : (
-          <span style={{ color: "#9ca3af", fontSize: 11 }}>-</span>
+          <span className="syncjobs-error-empty">-</span>
         )
       ),
     },
@@ -169,12 +154,12 @@ export default function SyncJobs() {
         </div>
 
         {/* Filters */}
-        <div className="panel" style={{ marginBottom: 16 }}>
+        <div className="panel panel-mb-16">
           <div className="panel-header">
             <h3>Filters</h3>
           </div>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "8px 0" }}>
-            <label className="modal-field" style={{ margin: 0, minWidth: 200 }}>
+          <div className="syncjobs-filters-row">
+            <label className="modal-field syncjobs-filter-config">
               <span>Project Config ID</span>
               <input
                 type="text"
@@ -186,7 +171,7 @@ export default function SyncJobs() {
                 }}
               />
             </label>
-            <label className="modal-field" style={{ margin: 0 }}>
+            <label className="modal-field field-reset">
               <span>Job Type</span>
               <select
                 value={jobTypeFilter}
@@ -200,7 +185,7 @@ export default function SyncJobs() {
                 <option value="GITHUB_COMMITS">GitHub Commits</option>
               </select>
             </label>
-            <label className="modal-field" style={{ margin: 0 }}>
+            <label className="modal-field field-reset">
               <span>Status</span>
               <select
                 value={statusFilter}
@@ -220,28 +205,28 @@ export default function SyncJobs() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-          <div className="stat-card" style={{ flex: 1, padding: 16 }}>
+        <div className="syncjobs-stats-row">
+          <div className="stat-card syncjobs-stat-card">
             <div className="stat-value">{totalElements}</div>
             <div className="stat-label">Total Jobs</div>
           </div>
-          <div className="stat-card" style={{ flex: 1, padding: 16 }}>
-            <div className="stat-value" style={{ color: "#059669" }}>
-              {jobs.filter(j => j.status === "COMPLETED").length}
+          <div className="stat-card syncjobs-stat-card">
+            <div className="stat-value syncjobs-fetched">
+              {completedTotal}
             </div>
-            <div className="stat-label">Completed (this page)</div>
+            <div className="stat-label">Completed</div>
           </div>
-          <div className="stat-card" style={{ flex: 1, padding: 16 }}>
-            <div className="stat-value" style={{ color: "#dc2626" }}>
-              {jobs.filter(j => j.status === "FAILED").length}
+          <div className="stat-card syncjobs-stat-card">
+            <div className="stat-value syncjobs-failed">
+              {failedTotal}
             </div>
-            <div className="stat-label">Failed (this page)</div>
+            <div className="stat-label">Failed</div>
           </div>
-          <div className="stat-card" style={{ flex: 1, padding: 16 }}>
-            <div className="stat-value" style={{ color: "#d97706" }}>
-              {jobs.filter(j => j.status === "RUNNING").length}
+          <div className="stat-card syncjobs-stat-card">
+            <div className="stat-value syncjobs-running">
+              {runningTotal}
             </div>
-            <div className="stat-label">Running (this page)</div>
+            <div className="stat-label">Running</div>
           </div>
         </div>
 
@@ -260,44 +245,32 @@ export default function SyncJobs() {
         />
 
         {/* Legend */}
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel panel-mt-16">
           <div className="panel-header">
             <h3>Legend</h3>
           </div>
-          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", padding: "12px 0", fontSize: 13 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ 
-                padding: "2px 8px", 
-                borderRadius: 4, 
-                background: "#e6f0ff", 
-                color: "#0052cc",
-                fontSize: 11
-              }}>
+          <div className="syncjobs-legend-row">
+            <div className="syncjobs-legend-item">
+              <span className="syncjobs-type-badge jira">
                 Jira Issues
               </span>
-              <span style={{ color: "#6b7280" }}>Jira issue synchronization</span>
+              <span className="text-muted">Jira issue synchronization</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ 
-                padding: "2px 8px", 
-                borderRadius: 4, 
-                background: "#f0f0f0", 
-                color: "#24292e",
-                fontSize: 11
-              }}>
+            <div className="syncjobs-legend-item">
+              <span className="syncjobs-type-badge github">
                 GitHub Commits
               </span>
-              <span style={{ color: "#6b7280" }}>GitHub commit synchronization</span>
+              <span className="text-muted">GitHub commit synchronization</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: "#059669" }}>Fetched</span>
-              <span style={{ color: "#6b7280" }}>/</span>
-              <span style={{ color: "#0066cc" }}>Saved</span>
-              <span style={{ color: "#6b7280" }}>Records count</span>
+            <div className="syncjobs-legend-item">
+              <span className="syncjobs-fetched">Fetched</span>
+              <span className="text-muted">/</span>
+              <span className="syncjobs-saved">Saved</span>
+              <span className="text-muted">Records count</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: "#d97706" }}>Degraded</span>
-              <span style={{ color: "#6b7280" }}>Partial failure with fallback</span>
+            <div className="syncjobs-legend-item">
+              <span className="syncjobs-running">Degraded</span>
+              <span className="text-muted">Partial failure with fallback</span>
             </div>
           </div>
         </div>

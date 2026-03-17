@@ -9,6 +9,7 @@ const {
   useCreateProjectConfigMock,
   useUpdateProjectConfigMock,
   useVerifyProjectConfigMock,
+  useProfileMock,
   useGroupMock,
   useSyncJiraMock,
   useSyncGithubMock,
@@ -25,6 +26,7 @@ const {
   useCreateProjectConfigMock: vi.fn(),
   useUpdateProjectConfigMock: vi.fn(),
   useVerifyProjectConfigMock: vi.fn(),
+  useProfileMock: vi.fn(),
   useGroupMock: vi.fn(),
   useSyncJiraMock: vi.fn(),
   useSyncGithubMock: vi.fn(),
@@ -52,6 +54,10 @@ vi.mock('../../hooks/useProjectConfigs', () => ({
   useVerifyProjectConfig: () => useVerifyProjectConfigMock(),
 }))
 
+vi.mock('../../hooks/useAuth', () => ({
+  useProfile: () => useProfileMock(),
+}))
+
 vi.mock('../../hooks/useUserGroups', () => ({
   useGroup: (groupId) => useGroupMock(groupId),
 }))
@@ -70,15 +76,20 @@ describe('ProjectConfig page', () => {
 
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('role', 'LECTURER')
 
     navigateMock.mockReset()
+    useProfileMock.mockReset()
     createMutateAsyncMock.mockReset()
     updateMutateAsyncMock.mockReset()
     verifyMutateAsyncMock.mockReset()
     refetchSyncJobsMock.mockReset()
 
     routeParams.groupId = '7'
+
+    useProfileMock.mockReturnValue({
+      data: { role: 'LECTURER' },
+      isLoading: false,
+    })
 
     useProjectConfigByGroupMock.mockReturnValue({
       data: {
