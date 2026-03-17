@@ -5,6 +5,8 @@ export interface TokenPair {
 
 const ACCESS_TOKEN_KEY = "access_token"
 const REFRESH_TOKEN_KEY = "refresh_token"
+const LEGACY_ACCESS_TOKEN_KEYS = ["accessToken", "token"]
+const LEGACY_REFRESH_TOKEN_KEYS = ["refreshToken"]
 
 let memoryTokens: TokenPair | null = null
 
@@ -23,12 +25,20 @@ function removeToken(key: string): void {
   localStorage.removeItem(key)
 }
 
+function readFirstAvailable(keys: string[]): string | null {
+  for (const key of keys) {
+    const value = readToken(key)
+    if (value) return value
+  }
+  return null
+}
+
 export const tokenStore = {
   getAccessToken(): string | null {
-    return readToken(ACCESS_TOKEN_KEY) ?? memoryTokens?.accessToken ?? null
+    return readFirstAvailable([ACCESS_TOKEN_KEY, ...LEGACY_ACCESS_TOKEN_KEYS]) ?? memoryTokens?.accessToken ?? null
   },
   getRefreshToken(): string | null {
-    return readToken(REFRESH_TOKEN_KEY) ?? memoryTokens?.refreshToken ?? null
+    return readFirstAvailable([REFRESH_TOKEN_KEY, ...LEGACY_REFRESH_TOKEN_KEYS]) ?? memoryTokens?.refreshToken ?? null
   },
   setTokens(tokens: TokenPair): void {
     memoryTokens = tokens
@@ -39,5 +49,7 @@ export const tokenStore = {
     memoryTokens = null
     removeToken(ACCESS_TOKEN_KEY)
     removeToken(REFRESH_TOKEN_KEY)
+    LEGACY_ACCESS_TOKEN_KEYS.forEach(removeToken)
+    LEGACY_REFRESH_TOKEN_KEYS.forEach(removeToken)
   },
 }

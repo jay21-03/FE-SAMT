@@ -5,13 +5,13 @@ export type ActivitySource = "JIRA" | "GITHUB" | "ALL";
 
 // Request types
 export interface GenerateReportRequest {
-  projectConfigId: number;
+  projectConfigId: string;
   useAi?: boolean;
   exportType?: ExportType;
 }
 
 export interface ReportsQuery {
-  projectConfigId?: number;
+  projectConfigId?: string;
   type?: string;
   createdBy?: string;
   page?: number;
@@ -47,6 +47,27 @@ export interface RecentActivitiesQuery {
   size?: number;
 }
 
+export interface LeaderGroupTasksQuery {
+  status?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface MemberTasksQuery {
+  groupId: number;
+  status?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface TaskAssigneeUpdateRequest {
+  assigneeUserId: number;
+}
+
+export interface TaskStatusUpdateRequest {
+  status: string;
+}
+
 // Response types
 export interface ReportResponse {
   reportId: string;
@@ -57,7 +78,7 @@ export interface ReportResponse {
 
 export interface ReportMetadata {
   reportId: string;
-  projectConfigId: number;
+  projectConfigId: string;
   type: string;
   createdBy: string;
   createdAt: string;
@@ -132,6 +153,36 @@ export interface RecentActivity {
   occurredAt: string;
   externalId: string;
   url: string;
+}
+
+export interface MemberCommitSummary {
+  authorEmail: string;
+  authorName: string;
+  authorLogin: string;
+  commitCount: number;
+  additions: number;
+  deletions: number;
+  totalChanges: number;
+}
+
+export interface TeamCommitSummary {
+  groupId: number;
+  from: string | null;
+  to: string | null;
+  totalCommits: number;
+  totalPullRequests: number;
+  activeContributors: number;
+  members: MemberCommitSummary[];
+}
+
+export interface TeamMemberTaskStats {
+  groupId: number;
+  memberId: number;
+  totalAssigned: number;
+  completed: number;
+  inProgress: number;
+  todo: number;
+  completionRate: number;
 }
 
 // Page response

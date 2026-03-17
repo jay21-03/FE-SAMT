@@ -66,6 +66,11 @@ export const userGroupApi = {
     return unwrapData<Semester>(r.data)
   },
 
+  async getSemesterByCode(code: string) {
+    const r = await api.get<Semester>(`/api/semesters/code/${encodeURIComponent(code)}`)
+    return unwrapData<Semester>(r.data)
+  },
+
   async createSemester(payload: CreateSemesterRequest) {
     const r = await api.post<Semester>("/api/semesters", payload)
     return unwrapData<Semester>(r.data)
