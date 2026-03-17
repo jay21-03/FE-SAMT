@@ -1,13 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from '../../router/ProtectedRoute'
 
+const { useProfileMock } = vi.hoisted(() => ({
+  useProfileMock: vi.fn(),
+}))
+
+vi.mock('../../hooks/useAuth', () => ({
+  useProfile: () => useProfileMock(),
+}))
+
 function renderProtected(role) {
-  localStorage.clear()
-  if (role) {
-    localStorage.setItem('role', role)
-  }
+  useProfileMock.mockReturnValue({
+    data: role ? { role } : null,
+    isLoading: false,
+  })
 
   return render(
     <MemoryRouter initialEntries={['/secure']}>
@@ -27,10 +35,10 @@ function renderProtected(role) {
 }
 
 function renderProtectedWithAllowedRoles(role, allowedRoles) {
-  localStorage.clear()
-  if (role) {
-    localStorage.setItem('role', role)
-  }
+  useProfileMock.mockReturnValue({
+    data: role ? { role } : null,
+    isLoading: false,
+  })
 
   return render(
     <MemoryRouter initialEntries={['/secure']}>
@@ -51,7 +59,7 @@ function renderProtectedWithAllowedRoles(role, allowedRoles) {
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
-    localStorage.clear()
+    useProfileMock.mockReset()
   })
 
   afterEach(() => {

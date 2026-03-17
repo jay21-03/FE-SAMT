@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
+import { useProfile } from "../hooks/useAuth";
 
 export default function Sidebar() {
-  const role = localStorage.getItem("role");
+  const { data: profile } = useProfile();
+  const role = profile?.role || profile?.roles?.[0] || null;
 
   return (
     <aside className="sidebar">

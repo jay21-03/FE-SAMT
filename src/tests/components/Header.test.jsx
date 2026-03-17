@@ -7,6 +7,10 @@ const { navigateMock, tokenClearMock } = vi.hoisted(() => ({
   tokenClearMock: vi.fn(),
 }))
 
+const { useProfileMock } = vi.hoisted(() => ({
+  useProfileMock: vi.fn(),
+}))
+
 vi.mock('react-router-dom', () => ({
   useNavigate: () => navigateMock,
 }))
@@ -17,19 +21,27 @@ vi.mock('../../api/tokenStore.ts', () => ({
   },
 }))
 
+vi.mock('../../hooks/useAuth', () => ({
+  useProfile: () => useProfileMock(),
+}))
+
 describe('Header', () => {
   beforeEach(() => {
     navigateMock.mockReset()
     tokenClearMock.mockReset()
+    useProfileMock.mockReset()
     localStorage.clear()
-    localStorage.setItem('role', 'ADMIN')
+    useProfileMock.mockReturnValue({
+      data: { role: 'ADMIN', fullName: 'Admin User' },
+      isLoading: false,
+    })
   })
 
   afterEach(() => {
     cleanup()
   })
 
-  it('renders current role from localStorage', () => {
+  it('renders current role from backend profile', () => {
     render(<Header />)
     expect(screen.getByText('ADMIN')).toBeInTheDocument()
   })

@@ -5,6 +5,7 @@ import type {
   ReportsQuery,
   StudentTasksQuery,
   GithubStatsQuery,
+  AdminOverviewQuery,
   LecturerOverviewQuery,
   GroupProgressQuery,
   RecentActivitiesQuery,
@@ -20,6 +21,7 @@ export const reportQueryKeys = {
   studentTasks: (query?: StudentTasksQuery) => ["studentTasks", query] as const,
   studentGithubStats: (query: GithubStatsQuery) => ["studentGithubStats", query] as const,
   studentContribution: (query: GithubStatsQuery) => ["studentContribution", query] as const,
+  adminOverview: (query?: AdminOverviewQuery) => ["adminOverview", query] as const,
   lecturerOverview: (query?: LecturerOverviewQuery) => ["lecturerOverview", query] as const,
   groupProgress: (groupId: number, query?: GroupProgressQuery) =>
     ["groupProgress", groupId, query] as const,
@@ -153,6 +155,16 @@ export const useLecturerOverview = (query?: LecturerOverviewQuery) =>
   useQuery({
     queryKey: reportQueryKeys.lecturerOverview(query),
     queryFn: () => reportApi.getLecturerOverview(query),
+    staleTime: 60_000,
+  });
+
+/**
+ * Get admin overview metrics
+ */
+export const useAdminOverview = (query?: AdminOverviewQuery) =>
+  useQuery({
+    queryKey: reportQueryKeys.adminOverview(query),
+    queryFn: () => reportApi.getAdminOverview(query),
     staleTime: 60_000,
   });
 

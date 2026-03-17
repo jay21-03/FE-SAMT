@@ -10,6 +10,8 @@ import type {
   GithubStatsQuery,
   GithubStats,
   ContributionSummary,
+  AdminOverview,
+  AdminOverviewQuery,
   LecturerOverviewQuery,
   LecturerOverview,
   GroupProgressQuery,
@@ -127,6 +129,17 @@ export const reportApi = {
   async getLecturerOverview(query?: LecturerOverviewQuery): Promise<LecturerOverview> {
     const { data } = await api.get<ApiResponse<LecturerOverview>>(
       "/api/reports/lecturer/overview",
+      { params: query }
+    );
+    return data.data;
+  },
+
+  /**
+   * Get admin overview metrics
+   */
+  async getAdminOverview(query?: AdminOverviewQuery): Promise<AdminOverview> {
+    const { data } = await api.get<ApiResponse<AdminOverview>>(
+      "/api/reports/admin/overview",
       { params: query }
     );
     return data.data;

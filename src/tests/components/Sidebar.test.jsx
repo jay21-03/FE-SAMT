@@ -1,13 +1,21 @@
 import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 
+const { useProfileMock } = vi.hoisted(() => ({
+  useProfileMock: vi.fn(),
+}))
+
+vi.mock('../../hooks/useAuth', () => ({
+  useProfile: () => useProfileMock(),
+}))
+
 function renderSidebar(role) {
-  localStorage.clear()
-  if (role) {
-    localStorage.setItem('role', role)
-  }
+  useProfileMock.mockReturnValue({
+    data: role ? { role } : null,
+    isLoading: false,
+  })
 
   render(
     <MemoryRouter>
@@ -18,7 +26,7 @@ function renderSidebar(role) {
 
 describe('Sidebar', () => {
   beforeEach(() => {
-    localStorage.clear()
+    useProfileMock.mockReset()
   })
 
   afterEach(() => {

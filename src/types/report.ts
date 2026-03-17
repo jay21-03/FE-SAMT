@@ -36,6 +36,10 @@ export interface LecturerOverviewQuery {
   semesterId?: number;
 }
 
+export interface AdminOverviewQuery {
+  semesterId?: number;
+}
+
 export interface GroupProgressQuery {
   from?: string;
   to?: string;
@@ -131,6 +135,21 @@ export interface LecturerOverview {
   githubCommitCount: number;
   githubPrCount: number;
   lastSyncAt: string | null;
+}
+
+export type HealthStatus = "HEALTHY" | "DEGRADED" | "ISSUE" | "NO_DATA";
+export type ServerHealth = "ONLINE" | "DEGRADED" | "OFFLINE";
+
+export interface AdminOverview {
+  semesterId: number | null;
+  totalUsers: number;
+  totalGroups: number;
+  activeProjects: number;
+  pendingSyncJobs: number;
+  jiraApiHealth: HealthStatus;
+  githubApiHealth: HealthStatus;
+  serverHealth: ServerHealth;
+  lastCalculatedAt: string;
 }
 
 export interface GroupProgress {

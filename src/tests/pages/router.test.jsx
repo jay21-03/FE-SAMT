@@ -3,6 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import AppRouter from '../../router/router'
 
+vi.mock('../../hooks/useAuth', () => ({
+  useProfile: () => ({
+    data: localStorage.getItem('role') ? { role: localStorage.getItem('role') } : null,
+    isLoading: false,
+  }),
+}))
+
 vi.mock('../../pages/auth/Login.jsx', () => ({ default: () => <div>Login Page</div> }))
 vi.mock('../../pages/auth/Register.jsx', () => ({ default: () => <div>Register Page</div> }))
 vi.mock('../../pages/admin/AdminDashboard.jsx', () => ({ default: () => <div>Admin Dashboard</div> }))

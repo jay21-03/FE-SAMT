@@ -7,6 +7,10 @@ const { useUsersMock, useGroupsMock } = vi.hoisted(() => ({
   useGroupsMock: vi.fn(),
 }))
 
+const { useAdminOverviewMock } = vi.hoisted(() => ({
+  useAdminOverviewMock: vi.fn(),
+}))
+
 vi.mock('../../layout/DashboardLayout', () => ({
   default: ({ children }) => <div>{children}</div>,
 }))
@@ -16,10 +20,15 @@ vi.mock('../../hooks/useUserGroups', () => ({
   useGroups: (query) => useGroupsMock(query),
 }))
 
+vi.mock('../../hooks/useReport', () => ({
+  useAdminOverview: () => useAdminOverviewMock(),
+}))
+
 describe('AdminDashboard page', () => {
   beforeEach(() => {
     useUsersMock.mockReset()
     useGroupsMock.mockReset()
+    useAdminOverviewMock.mockReset()
 
     useUsersMock.mockReturnValue({
       data: {
@@ -33,6 +42,19 @@ describe('AdminDashboard page', () => {
       data: {
         content: [{ id: 10, groupName: 'SE1705-G1', lecturerName: 'Dr QA', memberCount: 6 }],
         totalElements: 4,
+      },
+      isLoading: false,
+    })
+
+    useAdminOverviewMock.mockReturnValue({
+      data: {
+        totalUsers: 12,
+        totalGroups: 4,
+        activeProjects: 3,
+        pendingSyncJobs: 2,
+        jiraApiHealth: 'HEALTHY',
+        githubApiHealth: 'HEALTHY',
+        serverHealth: 'ONLINE',
       },
       isLoading: false,
     })

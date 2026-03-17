@@ -2,10 +2,12 @@ import { useMemo } from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
 import StatCard from "../../components/StatCard";
 import { useGroups, useUsers } from "../../hooks/useUserGroups";
+import { useAdminOverview } from "../../hooks/useReport";
 
 export default function AdminDashboard() {
   const { data: usersData, isLoading: usersLoading } = useUsers({ page: 0, size: 5 });
   const { data: groupsData, isLoading: groupsLoading } = useGroups({ page: 0, size: 5 });
+  const { data: adminOverviewData, isLoading: overviewLoading } = useAdminOverview();
 
   const recentUsers = useMemo(() => {
     if (!usersData?.content) return [];
@@ -27,8 +29,31 @@ export default function AdminDashboard() {
     }));
   }, [groupsData]);
 
-  const totalUsers = usersData?.totalElements ?? 0;
-  const totalGroups = groupsData?.totalElements ?? 0;
+  const totalUsers = adminOverviewData?.totalUsers ?? usersData?.totalElements ?? 0;
+  const totalGroups = adminOverviewData?.totalGroups ?? groupsData?.totalElements ?? 0;
+  const activeProjects = adminOverviewData?.activeProjects ?? 0;
+  const pendingRequests = adminOverviewData?.pendingSyncJobs ?? 0;
+
+  const mapHealthStatus = (status) => {
+    switch (status) {
+      case "HEALTHY":
+      case "ONLINE":
+        return { label: "Healthy", className: "status-active" };
+      case "ISSUE":
+      case "OFFLINE":
+        return { label: "Issue", className: "status-locked" };
+      case "DEGRADED":
+        return { label: "Degraded", className: "status-pending" };
+      default:
+        return { label: "No Data", className: "status-pending" };
+    }
+  };
+
+  const jiraStatus = mapHealthStatus(adminOverviewData?.jiraApiHealth);
+  const githubStatus = mapHealthStatus(adminOverviewData?.githubApiHealth);
+  const serverStatus = overviewLoading
+    ? { label: "Checking", className: "status-pending" }
+    : mapHealthStatus(adminOverviewData?.serverHealth);
 
   return (
     <DashboardLayout>
@@ -45,8 +70,8 @@ export default function AdminDashboard() {
         <section className="admin-stats-row">
           <StatCard title="Total Users" value={String(totalUsers)} />
           <StatCard title="Total Groups" value={String(totalGroups)} />
-          <StatCard title="Active Projects" value={String(totalGroups)} />
-          <StatCard title="Pending Requests" value="0" />
+          <StatCard title="Active Projects" value={String(activeProjects)} />
+          <StatCard title="Pending Requests" value={String(pendingRequests)} />
         </section>
 
         <section className="admin-main-grid">
@@ -65,13 +90,13 @@ export default function AdminDashboard() {
               <tbody>
                 {usersLoading ? (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
+                    <td colSpan={3} className="table-empty-cell">
                       Loading...
                     </td>
                   </tr>
                 ) : recentUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
+                    <td colSpan={3} className="table-empty-cell">
                       No data
                     </td>
                   </tr>
@@ -103,13 +128,13 @@ export default function AdminDashboard() {
               <tbody>
                 {groupsLoading ? (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
+                    <td colSpan={3} className="table-empty-cell">
                       Loading...
                     </td>
                   </tr>
                 ) : activeGroups.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
+                    <td colSpan={3} className="table-empty-cell">
                       No data
                     </td>
                   </tr>
@@ -135,15 +160,15 @@ export default function AdminDashboard() {
             <div className="system-status-grid">
               <div className="system-status-item">
                 <span>Jira API</span>
-                <span className="status-pill status-pending">Unknown</span>
+                <span className={`status-pill ${jiraStatus.className}`}>{jiraStatus.label}</span>
               </div>
               <div className="system-status-item">
                 <span>GitHub API</span>
-                <span className="status-pill status-pending">Unknown</span>
+                <span className={`status-pill ${githubStatus.className}`}>{githubStatus.label}</span>
               </div>
               <div className="system-status-item">
                 <span>Server Status</span>
-                <span className="status-pill status-pending">Unknown</span>
+                <span className={`status-pill ${serverStatus.className}`}>{serverStatus.label}</span>
               </div>
             </div>
           </div>
