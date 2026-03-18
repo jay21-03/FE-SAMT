@@ -7,22 +7,12 @@ import type {
   SyncJobsPage,
 } from "../types/sync";
 import { api } from "./apiClient";
-
-interface ApiResponse<T> {
-  status: number;
-  success: boolean;
-  data: T;
-  path: string;
-  correlationId?: string;
-  degraded?: boolean;
-}
-
-const unwrap = <T>(response: ApiResponse<T>): T => response.data;
+import { unwrapApiData } from "./response";
 
 const postSync = async <T>(path: string, projectConfigId: string): Promise<T> => {
   const payload: SyncRequest = { projectConfigId };
-  const { data } = await api.post<ApiResponse<T>>(path, payload);
-  return unwrap(data);
+  const { data } = await api.post<unknown>(path, payload);
+  return unwrapApiData<T>(data);
 };
 
 export const syncApi = {
@@ -51,17 +41,17 @@ export const syncApi = {
    * Get sync job by ID
    */
   async getSyncJob(syncJobId: number): Promise<SyncJob> {
-    const { data } = await api.get<ApiResponse<SyncJob>>(`/api/sync/jobs/${syncJobId}`);
-    return unwrap(data);
+    const { data } = await api.get<unknown>(`/api/sync/jobs/${syncJobId}`);
+    return unwrapApiData<SyncJob>(data);
   },
 
   /**
    * List sync jobs with optional filters
    */
   async listSyncJobs(query?: SyncJobsQuery): Promise<SyncJobsPage> {
-    const { data } = await api.get<ApiResponse<SyncJobsPage>>("/api/sync/jobs", {
+    const { data } = await api.get<unknown>("/api/sync/jobs", {
       params: query,
     });
-    return unwrap(data);
+    return unwrapApiData<SyncJobsPage>(data);
   },
 };

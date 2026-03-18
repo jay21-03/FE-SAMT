@@ -4,12 +4,14 @@ import LecturerTasks from '../../pages/lecturer/LecturerTasks'
 
 const {
   useSemestersMock,
-  useGroupsMock,
+  useUserGroupsMock,
+  useProfileMock,
   useGroupProgressMock,
   useRecentActivitiesMock,
 } = vi.hoisted(() => ({
   useSemestersMock: vi.fn(),
-  useGroupsMock: vi.fn(),
+  useUserGroupsMock: vi.fn(),
+  useProfileMock: vi.fn(),
   useGroupProgressMock: vi.fn(),
   useRecentActivitiesMock: vi.fn(),
 }))
@@ -27,8 +29,12 @@ vi.mock('../../layout/DashboardLayout', () => ({
 }))
 
 vi.mock('../../hooks/useUserGroups', () => ({
-  useGroups: (query) => useGroupsMock(query),
   useSemesters: () => useSemestersMock(),
+  useUserGroups: (userId) => useUserGroupsMock(userId),
+}))
+
+vi.mock('../../hooks/useAuth', () => ({
+  useProfile: () => useProfileMock(),
 }))
 
 vi.mock('../../hooks/useReport', () => ({
@@ -39,13 +45,17 @@ vi.mock('../../hooks/useReport', () => ({
 describe('LecturerTasks page', () => {
   beforeEach(() => {
     useSemestersMock.mockReset()
-    useGroupsMock.mockReset()
+    useUserGroupsMock.mockReset()
+    useProfileMock.mockReset()
     useGroupProgressMock.mockReset()
     useRecentActivitiesMock.mockReset()
 
+    useProfileMock.mockReturnValue({ data: { id: 101, role: 'LECTURER' } })
     useSemestersMock.mockReturnValue({ data: [{ id: 1, semesterCode: 'SU26', isActive: true }] })
-    useGroupsMock.mockReturnValue({
-      data: { content: [{ id: 7, groupName: 'SE1705-G1' }] },
+    useUserGroupsMock.mockReturnValue({
+      data: {
+        groups: [{ groupId: 7, groupName: 'SE1705-G1', semesterId: 1, semesterCode: 'SU26' }],
+      },
       isLoading: false,
     })
     useGroupProgressMock.mockReturnValue({
@@ -101,7 +111,7 @@ describe('LecturerTasks page', () => {
   })
 
   it('shows loading state when groups or activities are loading', () => {
-    useGroupsMock.mockReturnValue({ data: { content: [] }, isLoading: true })
+    useUserGroupsMock.mockReturnValue({ data: { groups: [] }, isLoading: true })
     useRecentActivitiesMock.mockReturnValue({ data: { content: [] }, isLoading: true })
 
     render(<LecturerTasks />)

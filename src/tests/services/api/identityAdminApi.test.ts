@@ -26,8 +26,10 @@ describe('identityAdminApi', () => {
   })
 
   it('creates/deletes/restores user', async () => {
-    postMock.mockResolvedValue({ data: { id: 1 } })
-    deleteMock.mockResolvedValue({ data: { success: true } })
+    postMock
+      .mockResolvedValueOnce({ data: { data: { id: 1 } } })
+      .mockResolvedValueOnce({ data: { data: { id: 1 } } })
+    deleteMock.mockResolvedValue({ data: { data: { success: true } } })
 
     const created = await identityAdminApi.createUser({ email: 'admin@qa.com' })
     const deleted = await identityAdminApi.deleteUser(1)
@@ -42,8 +44,8 @@ describe('identityAdminApi', () => {
   })
 
   it('locks/unlocks and updates external accounts', async () => {
-    postMock.mockResolvedValue({ data: { success: true } })
-    putMock.mockResolvedValue({ data: { linked: true } })
+    postMock.mockResolvedValue({ data: { data: { success: true } } })
+    putMock.mockResolvedValue({ data: { data: { linked: true } } })
 
     const locked = await identityAdminApi.lockUser(7, 'policy')
     const unlocked = await identityAdminApi.unlockUser(7)
@@ -60,7 +62,7 @@ describe('identityAdminApi', () => {
   })
 
   it('locks user without optional reason param', async () => {
-    postMock.mockResolvedValue({ data: { success: true } })
+    postMock.mockResolvedValue({ data: { data: { success: true } } })
 
     const locked = await identityAdminApi.lockUser(8)
 
@@ -71,7 +73,7 @@ describe('identityAdminApi', () => {
   })
 
   it('fetches audit endpoints', async () => {
-    getMock.mockResolvedValue({ data: { content: [] } })
+    getMock.mockResolvedValue({ data: { data: { content: [] } } })
 
     const security = await identityAdminApi.getSecurityEvents({ page: 0, size: 10 })
     const range = await identityAdminApi.getAuditByRange({ page: 0, size: 10 })

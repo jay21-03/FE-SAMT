@@ -64,14 +64,16 @@ describe('authApi', () => {
     expect(tokenStore.getRefreshToken()).toBe('flat-refresh')
   })
 
-  it('returns register response body', async () => {
+  it('unwraps register response body from ApiResponse envelope', async () => {
     postMock.mockResolvedValue({
       data: {
-        user: { id: 11, email: 'new@samt.local', fullName: 'New User' },
-        accessToken: 'register-access',
-        refreshToken: 'register-refresh',
-        tokenType: 'Bearer',
-        expiresIn: 900,
+        data: {
+          user: { id: 11, email: 'new@samt.local', fullName: 'New User' },
+          accessToken: 'register-access',
+          refreshToken: 'register-refresh',
+          tokenType: 'Bearer',
+          expiresIn: 900,
+        },
       },
     })
 

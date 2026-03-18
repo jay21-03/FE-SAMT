@@ -78,7 +78,7 @@ describe('useProjectConfigs hooks', () => {
   })
 
   it('calls create/update/delete/verify/restore mutations', async () => {
-    createConfigMock.mockResolvedValue({ data: { groupId: 12 } })
+    createConfigMock.mockResolvedValue({ groupId: 12 })
     updateConfigMock.mockResolvedValue({ id: 'cfg-1' })
     deleteConfigMock.mockResolvedValue({})
     verifyConfigMock.mockResolvedValue({})

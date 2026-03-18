@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useLecturerOverview, useRecentActivities } from "../../hooks/useReport";
 import { useProfile } from "../../hooks/useAuth";
-import { useGroups, useSemesters } from "../../hooks/useUserGroups";
+import { useSemesters, useUserGroups } from "../../hooks/useUserGroups";
 
 export default function LecturerGithubStats() {
   const navigate = useNavigate();
@@ -20,14 +20,20 @@ export default function LecturerGithubStats() {
     selectedSemester ? { semesterId: Number(selectedSemester) } : undefined
   );
 
-  // Fetch groups
-  const { data: groupsData } = useGroups({
-    page: 0,
-    size: 100,
-    semesterId: selectedSemester ? Number(selectedSemester) : undefined,
-    lecturerId: profile?.id,
-  }, { enabled: !!profile?.id });
-  const groups = groupsData?.content || [];
+  // Fetch own groups for lecturer
+  const { data: membershipsData } = useUserGroups(Number(profile?.id || 0));
+  const groups = useMemo(() => {
+    const memberships = membershipsData?.groups || [];
+    const semesterId = selectedSemester ? Number(selectedSemester) : undefined;
+    const filtered = semesterId
+      ? memberships.filter((group) => group.semesterId === semesterId)
+      : memberships;
+
+    return filtered.map((group) => ({
+      id: group.groupId,
+      groupName: group.groupName,
+    }));
+  }, [membershipsData, selectedSemester]);
   const hasSelectedGroup = selectedGroupId && groups.some((g) => g.id === Number(selectedGroupId));
 
   // Get active group

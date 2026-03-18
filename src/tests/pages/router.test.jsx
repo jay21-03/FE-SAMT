@@ -22,7 +22,6 @@ vi.mock('../../pages/admin/SyncJobs.jsx', () => ({ default: () => <div>Sync Jobs
 vi.mock('../../pages/lecturer/LecturerDashboard.jsx', () => ({ default: () => <div>Lecturer Dashboard</div> }))
 vi.mock('../../pages/lecturer/LecturerTasks.jsx', () => ({ default: () => <div>Lecturer Tasks</div> }))
 vi.mock('../../pages/lecturer/LecturerGithubStats.jsx', () => ({ default: () => <div>Lecturer Github Stats</div> }))
-vi.mock('../../pages/lecturer/LecturerGrading.jsx', () => ({ default: () => <div>Lecturer Grading</div> }))
 vi.mock('../../pages/student/StudentDashboard.jsx', () => ({
   default: () => {
     const location = useLocation()

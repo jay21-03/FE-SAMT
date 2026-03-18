@@ -26,8 +26,11 @@ export const useCreateProjectConfig = () => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (payload: CreateConfigRequest) => projectConfigApi.createConfig(payload),
-    onSuccess: (data: { data: { groupId: number } }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.projectConfigByGroup(data.data.groupId) })
+    onSuccess: (data: { groupId?: number; data?: { groupId?: number } }) => {
+      const groupId = data?.groupId ?? data?.data?.groupId
+      if (groupId) {
+        qc.invalidateQueries({ queryKey: queryKeys.projectConfigByGroup(groupId) })
+      }
     },
   })
 }
@@ -39,6 +42,7 @@ export const useUpdateProjectConfig = () => {
       projectConfigApi.updateConfig(id, payload),
     onSuccess: (_data: unknown, vars: { id: string; payload: UpdateConfigRequest }) => {
       qc.invalidateQueries({ queryKey: queryKeys.projectConfig(vars.id) })
+      qc.invalidateQueries({ queryKey: ["projectConfigByGroup"] })
     },
   })
 }
@@ -49,6 +53,7 @@ export const useDeleteProjectConfig = () => {
     mutationFn: (id: string) => projectConfigApi.deleteConfig(id),
     onSuccess: (_data: unknown, id: string) => {
       qc.invalidateQueries({ queryKey: queryKeys.projectConfig(id) })
+      qc.invalidateQueries({ queryKey: ["projectConfigByGroup"] })
     },
   })
 }
@@ -59,6 +64,7 @@ export const useVerifyProjectConfig = () => {
     mutationFn: (id: string) => projectConfigApi.verifyConfig(id),
     onSuccess: (_data: unknown, id: string) => {
       qc.invalidateQueries({ queryKey: queryKeys.projectConfig(id) })
+      qc.invalidateQueries({ queryKey: ["projectConfigByGroup"] })
     },
   })
 }
@@ -69,6 +75,7 @@ export const useRestoreProjectConfig = () => {
     mutationFn: (id: string) => projectConfigApi.restoreConfig(id),
     onSuccess: (_data: unknown, id: string) => {
       qc.invalidateQueries({ queryKey: queryKeys.projectConfig(id) })
+      qc.invalidateQueries({ queryKey: ["projectConfigByGroup"] })
     },
   })
 }

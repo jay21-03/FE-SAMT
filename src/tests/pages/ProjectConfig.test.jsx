@@ -11,6 +11,7 @@ const {
   useVerifyProjectConfigMock,
   useProfileMock,
   useGroupMock,
+  useUserGroupsMock,
   useSyncJiraMock,
   useSyncGithubMock,
   useSyncAllMock,
@@ -28,6 +29,7 @@ const {
   useVerifyProjectConfigMock: vi.fn(),
   useProfileMock: vi.fn(),
   useGroupMock: vi.fn(),
+  useUserGroupsMock: vi.fn(),
   useSyncJiraMock: vi.fn(),
   useSyncGithubMock: vi.fn(),
   useSyncAllMock: vi.fn(),
@@ -60,6 +62,7 @@ vi.mock('../../hooks/useAuth', () => ({
 
 vi.mock('../../hooks/useUserGroups', () => ({
   useGroup: (groupId) => useGroupMock(groupId),
+  useUserGroups: (userId) => useUserGroupsMock(userId),
 }))
 
 vi.mock('../../hooks/useSync', () => ({
@@ -93,16 +96,19 @@ describe('ProjectConfig page', () => {
 
     useProjectConfigByGroupMock.mockReturnValue({
       data: {
-        data: {
-          id: 'cfg-7',
-          state: 'DRAFT',
-          jiraHostUrl: 'https://jira.acme.com',
-          jiraEmail: 'qa@acme.com',
-          jiraApiToken: 'jira-token',
-          githubRepoUrl: 'https://github.com/acme/repo',
-          githubToken: 'ghp-token',
-        },
+        id: 'cfg-7',
+        state: 'DRAFT',
+        jiraHostUrl: 'https://jira.acme.com',
+        jiraEmail: 'qa@acme.com',
+        jiraApiToken: 'jira-token',
+        githubRepoUrl: 'https://github.com/acme/repo',
+        githubToken: 'ghp-token',
       },
+      isLoading: false,
+    })
+
+    useUserGroupsMock.mockReturnValue({
+      data: { groups: [{ groupId: 7, groupName: 'SE1704' }] },
       isLoading: false,
     })
 
@@ -163,7 +169,7 @@ describe('ProjectConfig page', () => {
   })
 
   it('shows validation error and skips create mutation when no values are provided', async () => {
-    useProjectConfigByGroupMock.mockReturnValue({ data: { data: null }, isLoading: false })
+    useProjectConfigByGroupMock.mockReturnValue({ data: null, isLoading: false })
     render(<ProjectConfig />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Save Config' }))

@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useLecturerOverview, useGroupProgress, useRecentActivities } from "../../hooks/useReport";
 import { useProfile } from "../../hooks/useAuth";
-import { useGroups, useSemesters } from "../../hooks/useUserGroups";
+import { useSemesters, useUserGroups } from "../../hooks/useUserGroups";
 
 export default function LecturerDashboard() {
   const navigate = useNavigate();
@@ -20,14 +20,20 @@ export default function LecturerDashboard() {
     selectedSemester ? { semesterId: Number(selectedSemester) } : undefined
   );
 
-  // Fetch groups for the lecturer
-  const { data: groupsData, isLoading: groupsLoading } = useGroups({
-    page: 0,
-    size: 50,
-    semesterId: selectedSemester ? Number(selectedSemester) : undefined,
-    lecturerId: profile?.id,
-  }, { enabled: !!profile?.id });
-  const groups = groupsData?.content || [];
+  // Fetch own groups for the lecturer
+  const { data: membershipsData, isLoading: groupsLoading } = useUserGroups(Number(profile?.id || 0));
+  const groups = useMemo(() => {
+    const memberships = membershipsData?.groups || [];
+    const semesterId = selectedSemester ? Number(selectedSemester) : undefined;
+    const filtered = semesterId
+      ? memberships.filter((group) => group.semesterId === semesterId)
+      : memberships;
+
+    return filtered.map((group) => ({
+      id: group.groupId,
+      groupName: group.groupName,
+    }));
+  }, [membershipsData, selectedSemester]);
 
   // Select first group if none selected
   const activeGroupId = selectedGroupId ?? groups[0]?.id ?? null;

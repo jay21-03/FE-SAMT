@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import DebouncedSearchInput from "../../components/DebouncedSearchInput";
-import { useGroups, useSemesters, useUsers } from "../../hooks/useUserGroups";
+import { useGroups, useSemesters, useUserGroups, useUsers } from "../../hooks/useUserGroups";
 import { useProfile } from "../../hooks/useAuth";
 import { userGroupApi } from "../../api/userGroupApi";
 
@@ -13,7 +13,9 @@ export default function GroupList() {
   const [search, setSearch] = useState("");
   const [semesterFilter, setSemesterFilter] = useState("");
   const { data: profile } = useProfile();
-  const role = profile?.role || profile?.roles?.[0] || null;
+  const role = String(profile?.role || profile?.roles?.[0] || "").toUpperCase();
+  const currentUserId = Number(profile?.id || 0);
+  const isOwnGroupOnlyRole = role === "LECTURER" || role === "STUDENT";
 
   // Create Group Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -26,13 +28,17 @@ export default function GroupList() {
   const [createError, setCreateError] = useState(null);
   const [createSuccess, setCreateSuccess] = useState(null);
 
-  const { data, isLoading, refetch } = useGroups({
+  const { data, isLoading: groupsLoading, refetch } = useGroups({
     page: 0,
     size: 50,
     semesterId: semesterFilter ? parseInt(semesterFilter, 10) : undefined,
-  });
+  }, { enabled: !isOwnGroupOnlyRole });
+  const { data: userGroupsData, isLoading: userGroupsLoading } = useUserGroups(currentUserId);
   const { data: semesters } = useSemesters();
-  const { data: lecturersData } = useUsers({ role: "LECTURER", page: 0, size: 100 });
+  const { data: lecturersData } = useUsers(
+    { role: "LECTURER", page: 0, size: 100 },
+    { enabled: role === "ADMIN", retry: false }
+  );
 
   const lecturers = lecturersData?.content || [];
 
@@ -110,18 +116,25 @@ export default function GroupList() {
   ];
 
   const rows = useMemo(() => {
-    if (!data?.content) return [];
+    const sourceGroups = isOwnGroupOnlyRole ? (userGroupsData?.groups || []) : (data?.content || []);
     const keyword = search.trim().toLowerCase();
-    const mapped = data.content.map((item) => ({
-      id: item.id,
-      name: item.groupName,
-      semester: item.semesterCode,
-      lecturer: item.lecturerName,
-      members: item.memberCount,
-    }));
+    const semesterId = semesterFilter ? parseInt(semesterFilter, 10) : null;
+    const mapped = sourceGroups
+      .map((item) => ({
+        id: item.id ?? item.groupId,
+        name: item.groupName,
+        semester: item.semesterCode,
+        semesterId: item.semesterId,
+        lecturer: item.lecturerName || "-",
+        members: item.memberCount ?? "-",
+      }))
+      .filter((group) => (semesterId ? group.semesterId === semesterId : true));
+
     if (!keyword) return mapped;
     return mapped.filter((group) => group.name.toLowerCase().includes(keyword));
-  }, [data, search]);
+  }, [data, isOwnGroupOnlyRole, search, semesterFilter, userGroupsData]);
+
+  const isLoading = isOwnGroupOnlyRole ? userGroupsLoading : groupsLoading;
 
   return (
     <DashboardLayout>
