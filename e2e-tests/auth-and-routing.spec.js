@@ -151,7 +151,7 @@ test.describe('Authentication and routing journeys', () => {
     await page.getByTestId('login-password').fill('Password@123')
     await page.getByRole('button', { name: 'Đăng nhập' }).click()
 
-    await page.waitForURL('**/app/student/profile/me')
-    await expect(page).toHaveURL(/\/app\/student\/profile\/me/)
+    await page.waitForURL('**/app/student/my-work')
+    await expect(page).toHaveURL(/\/app\/student\/my-work/)
   })
 })

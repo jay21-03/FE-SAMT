@@ -3,6 +3,7 @@ import DashboardLayout from "../../layout/DashboardLayout";
 import { useReports, useGenerateReport, useDownloadReport } from "../../hooks/useReport";
 import { useGroups } from "../../hooks/useUserGroups";
 import { useProjectConfigByGroup } from "../../hooks/useProjectConfigs";
+import { useProfile } from "../../hooks/useAuth";
 
 export default function Reports() {
   const [page, setPage] = useState(0);
@@ -26,7 +27,13 @@ export default function Reports() {
   const { data: processingReportsData } = useReports({ page: 0, size: 1, status: "PROCESSING" });
   const { data: pendingReportsData } = useReports({ page: 0, size: 1, status: "PENDING" });
   const { data: failedReportsData } = useReports({ page: 0, size: 1, status: "FAILED" });
-  const { data: groupsData } = useGroups({ page: 0, size: 100 });
+  const { data: profile } = useProfile();
+  const role = profile?.role || profile?.roles?.[0] || null;
+  const lecturerId = role === "LECTURER" ? profile?.id : undefined;
+  const { data: groupsData } = useGroups(
+    { page: 0, size: 100, lecturerId },
+    { enabled: !!role }
+  );
   const { data: configData } = useProjectConfigByGroup(
     selectedGroupId ? Number(selectedGroupId) : 0
   );
@@ -54,7 +61,7 @@ export default function Reports() {
     setErrorMessage(null);
     try {
       await generateReport.mutateAsync({
-        projectConfigId: configData.data.id,
+        projectConfigId: String(configData.data.id),
         useAi,
         exportType,
       });

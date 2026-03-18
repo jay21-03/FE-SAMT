@@ -40,7 +40,10 @@ export const reportApi = {
    * Generate SRS report
    */
   async generateSrsReport(request: GenerateReportRequest): Promise<ReportResponse> {
-    const { data } = await api.post<ApiResponse<ReportResponse>>("/api/reports/srs", request);
+    // Report generation (especially with AI) can take a while; override the default axios timeout.
+    const { data } = await api.post<ApiResponse<ReportResponse>>("/api/reports/srs", request, {
+      timeout: 10 * 60 * 1000,
+    });
     return data.data;
   },
 
@@ -71,6 +74,7 @@ export const reportApi = {
     });
 
     const contentDisposition = response.headers["content-disposition"];
+    const contentType = response.headers["content-type"] || "application/octet-stream";
     let fileName = fallbackFileName || `report_${reportId}`;
     if (contentDisposition) {
       const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;\n]+)/i);
@@ -81,7 +85,17 @@ export const reportApi = {
       }
     }
 
-    const blob = new Blob([response.data]);
+    // If filename is missing an extension, infer from content-type.
+    if (!/\.[A-Za-z0-9]+$/.test(fileName)) {
+      if (String(contentType).toLowerCase().includes("application/pdf")) {
+        fileName = `${fileName}.pdf`;
+      } else if (String(contentType).toLowerCase().includes("wordprocessingml")) {
+        fileName = `${fileName}.docx`;
+      }
+    }
+
+    // Preserve server-provided MIME type so browsers save/open correctly (avoid .txt downloads).
+    const blob = new Blob([response.data], { type: contentType });
     const url = window.URL.createObjectURL(blob);
     return { url, fileName };
   },
