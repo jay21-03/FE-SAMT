@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import UserProfile from '../../pages/shared/UserProfile'
 
 const {
@@ -26,6 +27,16 @@ vi.mock('../../hooks/useAuth', () => ({
   useProfile: () => useProfileMock(),
   useUpdateProfile: () => useUpdateProfileMock(),
 }))
+
+function renderPage(ui) {
+  const qc = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>)
+}
 
 describe('UserProfile page', () => {
   beforeEach(() => {
@@ -61,14 +72,14 @@ describe('UserProfile page', () => {
 
   it('renders loading state while profile is loading', () => {
     useProfileMock.mockReturnValue({ data: null, isLoading: true, error: null })
-    render(<UserProfile />)
+    renderPage(<UserProfile />)
 
     expect(screen.getByText('Loading profile...')).toBeInTheDocument()
   })
 
   it('renders error state and navigates back', () => {
     useProfileMock.mockReturnValue({ data: null, isLoading: false, error: new Error('failed') })
-    render(<UserProfile />)
+    renderPage(<UserProfile />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Go Back' }))
     expect(screen.getByText('Failed to load profile')).toBeInTheDocument()
@@ -76,7 +87,7 @@ describe('UserProfile page', () => {
   })
 
   it('validates required full name and skips mutation', async () => {
-    render(<UserProfile />)
+    renderPage(<UserProfile />)
 
     fireEvent.change(screen.getByPlaceholderText('Your full name'), {
       target: { value: '   ' },
@@ -89,7 +100,7 @@ describe('UserProfile page', () => {
 
   it('saves trimmed profile fields successfully', async () => {
     updateMutateAsyncMock.mockResolvedValue({ id: 7 })
-    render(<UserProfile />)
+    renderPage(<UserProfile />)
 
     fireEvent.change(screen.getByPlaceholderText('Your full name'), {
       target: { value: '  QA New Name  ' },
@@ -110,7 +121,7 @@ describe('UserProfile page', () => {
 
   it('shows conflict message when API returns 409', async () => {
     updateMutateAsyncMock.mockRejectedValue({ response: { status: 409 } })
-    render(<UserProfile />)
+    renderPage(<UserProfile />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
 

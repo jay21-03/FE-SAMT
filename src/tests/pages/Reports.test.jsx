@@ -5,24 +5,36 @@ import Reports from '../../pages/shared/Reports'
 const {
   useReportsMock,
   useGenerateReportMock,
+  useGenerateWorkDistributionReportMock,
+  useGenerateCommitAnalysisReportMock,
   useDownloadReportMock,
+  useRecentActivitiesMock,
   useUserGroupsMock,
   useGroupsMock,
+  useGroupMock,
   useProfileMock,
   useProjectConfigByGroupMock,
   refetchReportsMock,
   generateMutateAsyncMock,
+  generateWorkDistributionMutateAsyncMock,
+  generateCommitAnalysisMutateAsyncMock,
   downloadMutateAsyncMock,
 } = vi.hoisted(() => ({
   useReportsMock: vi.fn(),
   useGenerateReportMock: vi.fn(),
+  useGenerateWorkDistributionReportMock: vi.fn(),
+  useGenerateCommitAnalysisReportMock: vi.fn(),
   useDownloadReportMock: vi.fn(),
+  useRecentActivitiesMock: vi.fn(),
   useUserGroupsMock: vi.fn(),
   useGroupsMock: vi.fn(),
+  useGroupMock: vi.fn(),
   useProfileMock: vi.fn(),
   useProjectConfigByGroupMock: vi.fn(),
   refetchReportsMock: vi.fn(),
   generateMutateAsyncMock: vi.fn(),
+  generateWorkDistributionMutateAsyncMock: vi.fn(),
+  generateCommitAnalysisMutateAsyncMock: vi.fn(),
   downloadMutateAsyncMock: vi.fn(),
 }))
 
@@ -33,12 +45,16 @@ vi.mock('../../layout/DashboardLayout', () => ({
 vi.mock('../../hooks/useReport', () => ({
   useReports: (query) => useReportsMock(query),
   useGenerateReport: () => useGenerateReportMock(),
+  useGenerateWorkDistributionReport: () => useGenerateWorkDistributionReportMock(),
+  useGenerateCommitAnalysisReport: () => useGenerateCommitAnalysisReportMock(),
   useDownloadReport: () => useDownloadReportMock(),
+  useRecentActivities: (groupId, query) => useRecentActivitiesMock(groupId, query),
 }))
 
 vi.mock('../../hooks/useUserGroups', () => ({
   useGroups: (query, options) => useGroupsMock(query, options),
   useUserGroups: (userId) => useUserGroupsMock(userId),
+  useGroup: (groupId) => useGroupMock(groupId),
 }))
 
 vi.mock('../../hooks/useAuth', () => ({
@@ -61,13 +77,19 @@ describe('Reports page', () => {
   beforeEach(() => {
     useReportsMock.mockReset()
     useGenerateReportMock.mockReset()
+    useGenerateWorkDistributionReportMock.mockReset()
+    useGenerateCommitAnalysisReportMock.mockReset()
     useDownloadReportMock.mockReset()
+    useRecentActivitiesMock.mockReset()
     useUserGroupsMock.mockReset()
     useGroupsMock.mockReset()
+    useGroupMock.mockReset()
     useProfileMock.mockReset()
     useProjectConfigByGroupMock.mockReset()
     refetchReportsMock.mockReset()
     generateMutateAsyncMock.mockReset()
+    generateWorkDistributionMutateAsyncMock.mockReset()
+    generateCommitAnalysisMutateAsyncMock.mockReset()
     downloadMutateAsyncMock.mockReset()
 
     useReportsMock.mockImplementation((query) => {
@@ -80,7 +102,7 @@ describe('Reports page', () => {
     })
 
     useGroupsMock.mockReturnValue({
-      data: { content: [{ id: 88, groupName: 'OTHER-GROUP', semesterCode: 'FA26' }] },
+      data: { content: [{ id: 10, groupName: 'SE1705-G1', semesterCode: 'SU26' }] },
     })
 
     useUserGroupsMock.mockReturnValue({
@@ -94,8 +116,35 @@ describe('Reports page', () => {
       return { data: { data: null } }
     })
 
+    useGroupMock.mockImplementation((groupId) => {
+      if (groupId === 10) {
+        return {
+          data: {
+            id: 10,
+            members: [
+              { userId: 1, fullName: 'Student One' },
+              { userId: 2, fullName: 'Student Two' },
+            ],
+          },
+        }
+      }
+      return { data: null }
+    })
+
+    useRecentActivitiesMock.mockReturnValue({ data: { content: [] } })
+
     useGenerateReportMock.mockReturnValue({
       mutateAsync: generateMutateAsyncMock,
+      isPending: false,
+    })
+
+    useGenerateWorkDistributionReportMock.mockReturnValue({
+      mutateAsync: generateWorkDistributionMutateAsyncMock,
+      isPending: false,
+    })
+
+    useGenerateCommitAnalysisReportMock.mockReturnValue({
+      mutateAsync: generateCommitAnalysisMutateAsyncMock,
       isPending: false,
     })
 

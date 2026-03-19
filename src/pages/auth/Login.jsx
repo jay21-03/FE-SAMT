@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "../../api/authApi";
+import { queryKeys } from "../../hooks/queryKeys";
 
 export default function Login() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -14,9 +17,20 @@ export default function Login() {
     setError(null);
     setLoading(true);
 
+    const formData = new FormData(e.currentTarget);
+    const submittedEmail = String(formData.get("email") ?? email).trim();
+    const submittedPassword = String(formData.get("password") ?? password);
+
+    if (!submittedEmail || !submittedPassword) {
+      setError("Vui lòng nhập email và mật khẩu.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      await authApi.login({ email, password });
+      await authApi.login({ email: submittedEmail, password: submittedPassword });
       const profile = await authApi.getProfile();
+      queryClient.setQueryData(queryKeys.authSession, profile);
       const role = profile.role ?? "STUDENT";
       localStorage.removeItem("group_role");
 
@@ -81,8 +95,10 @@ export default function Login() {
               <input
                 type="email"
                 data-testid="login-email"
+                name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 required
                 placeholder="you@samt.edu.vn"
               />
@@ -93,8 +109,10 @@ export default function Login() {
               <input
                 type="password"
                 data-testid="login-password"
+                name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 required
                 placeholder="••••••••"
               />

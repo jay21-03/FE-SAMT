@@ -1,13 +1,14 @@
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
-import { useStudentTasks, useStudentContribution } from "../../hooks/useReport";
+import { useMemberTasks, useStudentContribution, useUpdateMemberTaskStatus } from "../../hooks/useReport";
 import { useProfile } from "../../hooks/useAuth";
 import { useUserGroups } from "../../hooks/useUserGroups";
+import StudentWorkspaceTabs from "../../components/StudentWorkspaceTabs";
 
 export default function StudentDashboard() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(0);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
 
   // Get current user profile to get userId
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -22,13 +23,14 @@ export default function StudentDashboard() {
 
   // Build query for tasks
   const tasksQuery = useMemo(() => {
-    const q = { page, size: 10 };
+    const q = { groupId, page, size: 10 };
     if (statusFilter) q.status = statusFilter;
     return q;
-  }, [page, statusFilter]);
+  }, [groupId, page, statusFilter]);
 
-  // Fetch student tasks
-  const { data: tasksData, isLoading: tasksLoading } = useStudentTasks(tasksQuery);
+  // Fetch member tasks (group-scoped) so status filters match Jira workflow
+  const { data: tasksData, isLoading: tasksLoading } = useMemberTasks(tasksQuery);
+  const updateTaskStatus = useUpdateMemberTaskStatus();
 
   // Fetch contribution summary for primary group - only when groupId is valid
   const { data: contributionData } = useStudentContribution({ groupId });
@@ -52,14 +54,16 @@ export default function StudentDashboard() {
     if (!status) return "";
     const s = status.toLowerCase().replace(/\s+/g, "-");
     switch (s) {
+      case "approved":
       case "done":
-      case "completed":
         return "status-active";
+      case "in-design":
       case "in-progress":
+      case "in_design":
       case "in_progress":
         return "status-pending";
-      case "to-do":
       case "todo":
+      case "to-do":
         return "status-invited";
       default:
         return "";
@@ -67,11 +71,42 @@ export default function StudentDashboard() {
   };
 
   const getScoreLabel = (score) => {
-    if (score >= 90) return "Excellent";
-    if (score >= 80) return "Very Good";
-    if (score >= 70) return "Good";
-    if (score >= 60) return "Fair";
+    const s = Number(score || 0);
+    if (s >= 90) return "Excellent";
+    if (s >= 80) return "Very Good";
+    if (s >= 70) return "Good";
+    if (s >= 60) return "Fair";
     return "Needs Improvement";
+  };
+
+  const scoreDisplay =
+    contribution.contributionScore > 0
+      ? Math.min(100, Number(contribution.contributionScore)).toFixed(1)
+      : "-";
+
+  const statusOptions = ["TODO", "IN_PROGRESS", "DONE"];
+
+  const getStatusLabel = (status) => {
+    const s = String(status || "").toUpperCase();
+    if (s === "DONE" || s === "APPROVED") return "APPROVED";
+    if (s === "IN_PROGRESS" || s === "IN_DESIGN") return "IN DESIGN";
+    return s || "-";
+  };
+
+  const canUpdateStatus = (task) => String(task?.source || "").toUpperCase() === "JIRA";
+
+  const updateStatus = async (taskId, nextStatus) => {
+    if (!taskId || !groupId || !nextStatus) return;
+    try {
+      setStatusUpdatingId(taskId);
+      await updateTaskStatus.mutateAsync({
+        taskId: String(taskId),
+        groupId: Number(groupId),
+        request: { status: String(nextStatus) },
+      });
+    } finally {
+      setStatusUpdatingId(null);
+    }
   };
 
   return (
@@ -79,21 +114,14 @@ export default function StudentDashboard() {
       <div className="student-dashboard">
         <div className="student-header">
           <div>
-            <h1 className="page-title">My Tasks</h1>
+            <h1 className="page-title">My Work</h1>
             <p className="page-subtitle">
               Track your tasks, progress, and contribution statistics.
             </p>
           </div>
         </div>
 
-        <div className="tab-row">
-          <Link className="tab tab-active" to="/app/student/profile/me">
-            My Tasks
-          </Link>
-          <Link className="tab" to="/app/student/stats">
-            My Stats
-          </Link>
-        </div>
+        <StudentWorkspaceTabs activeTab="my-work" />
 
         <div className="tab-row student-status-tabs">
           <button
@@ -121,7 +149,7 @@ export default function StudentDashboard() {
               setPage(0);
             }}
           >
-            In Progress
+            In Design
           </button>
           <button
             className={`tab ${statusFilter === "DONE" ? "tab-active" : ""}`}
@@ -130,7 +158,7 @@ export default function StudentDashboard() {
               setPage(0);
             }}
           >
-            Completed
+            Approved
           </button>
         </div>
 
@@ -191,9 +219,26 @@ export default function StudentDashboard() {
                         </span>
                       </td>
                       <td>
-                        <span className={`status-pill ${getStatusClass(task.status)}`}>
-                          {task.status}
-                        </span>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span className={`status-pill ${getStatusClass(task.status)}`}>
+                            {getStatusLabel(task.status)}
+                          </span>
+                          {canUpdateStatus(task) && (
+                            <select
+                              className="reports-select"
+                              aria-label={`Update status ${task.key}`}
+                              value={String(task.status || "").toUpperCase()}
+                              disabled={statusUpdatingId === task.taskId || updateTaskStatus.isPending}
+                              onChange={(e) => updateStatus(task.taskId, e.target.value)}
+                            >
+                              {statusOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {getStatusLabel(opt)}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
                       </td>
                       <td className="student-cell-sm">{task.priority || "-"}</td>
                       <td className="text-muted-sm">
@@ -257,9 +302,7 @@ export default function StudentDashboard() {
                 <h4>Contribution Summary</h4>
                 <div className="summary-score">
                   <div className="score-circle">
-                    {contribution.contributionScore > 0
-                      ? (contribution.contributionScore / 10).toFixed(1)
-                      : "-"}
+                    {scoreDisplay}
                   </div>
                   <div className="score-meta">
                     <span className="score-label">Score</span>

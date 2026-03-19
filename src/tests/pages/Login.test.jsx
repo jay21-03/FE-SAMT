@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Login from '../../pages/auth/Login'
 
 const { navigateMock, loginMock, getProfileMock } = vi.hoisted(() => ({
@@ -19,6 +20,16 @@ vi.mock('../../api/authApi', () => ({
   },
 }))
 
+function renderPage(ui) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+}
+
 describe('Login page', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -35,7 +46,7 @@ describe('Login page', () => {
     loginMock.mockResolvedValue({})
     getProfileMock.mockResolvedValue({ role: 'ADMIN' })
 
-    render(<Login />)
+    renderPage(<Login />)
 
     fireEvent.change(screen.getByPlaceholderText('you@samt.edu.vn'), {
       target: { value: 'admin@samt.edu.vn' },
@@ -60,7 +71,7 @@ describe('Login page', () => {
     loginMock.mockResolvedValue({})
     getProfileMock.mockResolvedValue({ role: 'STUDENT' })
 
-    render(<Login />)
+    renderPage(<Login />)
 
     fireEvent.change(screen.getByPlaceholderText('you@samt.edu.vn'), {
       target: { value: 'student@samt.edu.vn' },
@@ -81,13 +92,44 @@ describe('Login page', () => {
     expect(navigateMock).toHaveBeenCalledWith('/app/student/my-work')
   })
 
+  it('submits autofilled credentials on first attempt without onChange events', async () => {
+    loginMock.mockResolvedValue({})
+    getProfileMock.mockResolvedValue({ role: 'STUDENT' })
+
+    renderPage(<Login />)
+
+    const emailInput = screen.getByTestId('login-email')
+    const passwordInput = screen.getByTestId('login-password')
+    const form = emailInput.closest('form')
+    expect(form).not.toBeNull()
+
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value',
+    )?.set
+
+    if (!valueSetter || !form) throw new Error('unable to set input values')
+
+    valueSetter.call(emailInput, 'student@samt.edu.vn')
+    valueSetter.call(passwordInput, 'Password1!')
+
+    fireEvent.submit(form)
+
+    await waitFor(() => {
+      expect(loginMock).toHaveBeenCalledWith({
+        email: 'student@samt.edu.vn',
+        password: 'Password1!',
+      })
+    })
+  })
+
   it('shows error message when login fails', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     loginMock.mockRejectedValue(new Error('bad credentials'))
 
     try {
-      render(<Login />)
+      renderPage(<Login />)
 
       fireEvent.change(screen.getByPlaceholderText('you@samt.edu.vn'), {
         target: { value: 'student@samt.edu.vn' },
@@ -107,7 +149,7 @@ describe('Login page', () => {
   })
 
   it('navigates to register page from footer link', () => {
-    render(<Login />)
+    renderPage(<Login />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Đăng ký ngay' }))
     expect(navigateMock).toHaveBeenCalledWith('/register')

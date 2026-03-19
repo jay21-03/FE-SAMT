@@ -1,9 +1,14 @@
 import { Link } from "react-router-dom";
 import { useProfile } from "../hooks/useAuth";
+import { useUserGroups } from "../hooks/useUserGroups";
+import { isStudentLeader } from "../utils/access";
 
 export default function Sidebar() {
   const { data: profile } = useProfile();
   const role = profile?.role || profile?.roles?.[0] || null;
+  const currentUserId = Number(profile?.id || 0);
+  const { data: membershipsData } = useUserGroups(currentUserId);
+  const showStudentReports = role === "STUDENT" && isStudentLeader(membershipsData);
 
   return (
     <aside className="sidebar">
@@ -73,9 +78,11 @@ export default function Sidebar() {
         <nav className="sidebar-section">
           <p className="sidebar-section-title">Student</p>
           <div className="sidebar-nav">
-            <Link className="sidebar-link" to="/app/student/team-board">
-              <span>Team Board</span>
-            </Link>
+            {showStudentReports && (
+              <Link className="sidebar-link" to="/app/student/team-board">
+                <span>Team Board</span>
+              </Link>
+            )}
             <Link className="sidebar-link" to="/app/student/my-work">
               <span>My Work</span>
             </Link>
@@ -85,6 +92,11 @@ export default function Sidebar() {
             <Link className="sidebar-link" to="/app/groups">
               <span>My Groups</span>
             </Link>
+            {showStudentReports && (
+              <Link className="sidebar-link" to="/app/reports">
+                <span>Reports (SRS)</span>
+              </Link>
+            )}
             <Link className="sidebar-link" to="/app/student/permissions">
               <span>Permissions</span>
             </Link>

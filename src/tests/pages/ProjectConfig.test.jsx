@@ -90,7 +90,7 @@ describe('ProjectConfig page', () => {
     routeParams.groupId = '7'
 
     useProfileMock.mockReturnValue({
-      data: { role: 'LECTURER' },
+      data: { id: 55, role: 'LECTURER' },
       isLoading: false,
     })
 
@@ -131,7 +131,7 @@ describe('ProjectConfig page', () => {
       data: {
         groupName: 'SE1704',
         semesterCode: 'SU25',
-        lecturer: { fullName: 'Dr QA' },
+        lecturer: { id: 55, fullName: 'Dr QA' },
       },
     })
 

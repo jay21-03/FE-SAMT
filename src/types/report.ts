@@ -10,6 +10,44 @@ export interface GenerateReportRequest {
   exportType?: ExportType;
 }
 
+export interface AnalyticsTimeRange {
+  from: string;
+  to: string;
+}
+
+export interface AnalyticsMember {
+  id: string;
+  name: string;
+  email?: string;
+  githubUsername?: string;
+}
+
+export interface AnalyticsJiraIssue {
+  id: string;
+  assigneeId: string;
+  status: string;
+  createdAt: string;
+  completedAt?: string | null;
+  dueDate?: string | null;
+}
+
+export interface AnalyticsGitCommit {
+  authorId: string;
+  message: string;
+  linesAdded: number;
+  linesDeleted: number;
+  timestamp: string;
+}
+
+export interface AnalyticsReportRequest {
+  projectConfigId: string;
+  groupId: string;
+  timeRange: AnalyticsTimeRange;
+  members: AnalyticsMember[];
+  jiraIssues: AnalyticsJiraIssue[];
+  gitCommits: AnalyticsGitCommit[];
+}
+
 export interface ReportsQuery {
   projectConfigId?: string;
   type?: string;

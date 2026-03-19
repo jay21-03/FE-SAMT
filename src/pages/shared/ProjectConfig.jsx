@@ -10,6 +10,7 @@ import {
 import { useProfile } from "../../hooks/useAuth";
 import { useGroup, useUserGroups } from "../../hooks/useUserGroups";
 import { useSyncJira, useSyncGithub, useSyncAll, useSyncJobs } from "../../hooks/useSync";
+import { canLecturerAccessGroup, canMemberAccessGroup, groupsHomePath, normalizeRole } from "../../utils/access";
 
 export default function ProjectConfig() {
   const { groupId } = useParams();
@@ -18,9 +19,10 @@ export default function ProjectConfig() {
   const hasValidGroupId = Number.isInteger(parsedGroupId) && parsedGroupId > 0;
   const groupIdNumber = hasValidGroupId ? parsedGroupId : 0;
   const { data: profile } = useProfile();
-  const role = profile?.role || profile?.roles?.[0] || null;
+  const role = normalizeRole(profile?.role || profile?.roles?.[0]);
   const isAdmin = role === "ADMIN";
   const currentUserId = Number(profile?.id || 0);
+  const groupsHome = groupsHomePath(role);
 
   const { data, isLoading } = useProjectConfigByGroup(groupIdNumber, { enabled: hasValidGroupId });
   const config = data?.data ?? data ?? null;
@@ -39,9 +41,9 @@ export default function ProjectConfig() {
   const projectConfigId = config?.id;
   const hasGroupAccess = useMemo(() => {
     if (isAdmin) return true;
-    const groups = membershipsData?.groups || [];
-    return groups.some((g) => g.groupId === groupIdNumber);
-  }, [groupIdNumber, isAdmin, membershipsData]);
+    if (role === "LECTURER") return canLecturerAccessGroup(group, currentUserId);
+    return canMemberAccessGroup(membershipsData, groupIdNumber);
+  }, [currentUserId, group, groupIdNumber, isAdmin, membershipsData, role]);
 
   // Fetch sync jobs for this project config
   const { data: syncJobsData, refetch: refetchSyncJobs } = useSyncJobs(
@@ -163,6 +165,21 @@ export default function ProjectConfig() {
       refetchSyncJobs();
       setTimeout(() => setSyncMessage(null), 5000);
     } catch (err) {
+      // GitHub sync can take a long time (commit-detail calls). If the request times out but the job is running,
+      // don't show it as "failed" to the user.
+      const msg = String(err?.response?.data?.message || err?.message || "");
+      const isTimeout =
+        msg.toLowerCase().includes("timeout") ||
+        msg.toLowerCase().includes("timed out") ||
+        err?.code === "ECONNABORTED" ||
+        err?.name === "AbortError" ||
+        err?.name === "CanceledError";
+      if (isTimeout) {
+        setSyncMessage("GitHub sync started. It may take a few minutes — check Recent Sync Jobs for progress.");
+        refetchSyncJobs();
+        setTimeout(() => setSyncMessage(null), 8000);
+        return;
+      }
       setSyncError(err?.response?.data?.message || "GitHub sync failed. Please check your configuration.");
     }
   };
@@ -179,6 +196,19 @@ export default function ProjectConfig() {
       refetchSyncJobs();
       setTimeout(() => setSyncMessage(null), 5000);
     } catch (err) {
+      const msg = String(err?.response?.data?.message || err?.message || "");
+      const isTimeout =
+        msg.toLowerCase().includes("timeout") ||
+        msg.toLowerCase().includes("timed out") ||
+        err?.code === "ECONNABORTED" ||
+        err?.name === "AbortError" ||
+        err?.name === "CanceledError";
+      if (isTimeout) {
+        setSyncMessage("Sync started. It may take a few minutes — check Recent Sync Jobs for progress.");
+        refetchSyncJobs();
+        setTimeout(() => setSyncMessage(null), 8000);
+        return;
+      }
       setSyncError(err?.response?.data?.message || "Sync failed. Please check your configuration.");
     }
   };
@@ -198,7 +228,7 @@ export default function ProjectConfig() {
 
   const handleBack = () => {
     if (!hasValidGroupId) {
-      navigate("/app/groups");
+      navigate(groupsHome);
       return;
     }
 
@@ -218,14 +248,14 @@ export default function ProjectConfig() {
             <p className="project-config-invalid-text">
               Missing or invalid group id in URL.
             </p>
-            <button className="primary-button" onClick={() => navigate("/app/groups")}>Back to Groups</button>
+            <button className="primary-button" onClick={() => navigate(groupsHome)}>Back to Groups</button>
           </div>
         </div>
       </DashboardLayout>
     );
   }
 
-  if (!isAdmin && membershipsLoading) {
+  if (!isAdmin && role !== "LECTURER" && membershipsLoading) {
     return (
       <DashboardLayout>
         <div className="admin-dashboard">
@@ -244,7 +274,7 @@ export default function ProjectConfig() {
           <div className="panel panel-center-lg">
             <h2 className="project-config-invalid-title">Access Denied</h2>
             <p className="project-config-invalid-text">You can only access configuration of your own groups.</p>
-            <button className="primary-button" onClick={() => navigate("/app/groups")}>Back to My Groups</button>
+            <button className="primary-button" onClick={() => navigate(groupsHome)}>Back to My Groups</button>
           </div>
         </div>
       </DashboardLayout>

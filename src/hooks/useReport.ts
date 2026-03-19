@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { reportApi } from "../api/reportApi";
 import type {
+  AnalyticsReportRequest,
   GenerateReportRequest,
   ReportsQuery,
   StudentTasksQuery,
@@ -60,6 +61,26 @@ export const useGenerateReport = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (request: GenerateReportRequest) => reportApi.generateSrsReport(request),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+};
+
+export const useGenerateWorkDistributionReport = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (request: AnalyticsReportRequest) => reportApi.generateWorkDistributionReport(request),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+};
+
+export const useGenerateCommitAnalysisReport = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (request: AnalyticsReportRequest) => reportApi.generateCommitAnalysisReport(request),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["reports"] });
     },
@@ -165,7 +186,10 @@ export const useAdminOverview = (query?: AdminOverviewQuery) =>
   useQuery({
     queryKey: reportQueryKeys.adminOverview(query),
     queryFn: () => reportApi.getAdminOverview(query),
-    staleTime: 60_000,
+    // Keep admin dashboard responsive to short-lived RUNNING sync jobs.
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
   });
 
 /**

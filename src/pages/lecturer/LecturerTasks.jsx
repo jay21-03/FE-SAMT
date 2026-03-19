@@ -4,7 +4,8 @@ import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import { useRecentActivities, useGroupProgress } from "../../hooks/useReport";
 import { useProfile } from "../../hooks/useAuth";
-import { useSemesters, useUserGroups } from "../../hooks/useUserGroups";
+import { useGroups, useSemesters } from "../../hooks/useUserGroups";
+import { toPercentLabel } from "../../utils/metrics";
 
 export default function LecturerTasks() {
   const [selectedSemester, setSelectedSemester] = useState("");
@@ -18,20 +19,23 @@ export default function LecturerTasks() {
   const { data: semestersData } = useSemesters();
   const semesters = Array.isArray(semestersData) ? semestersData : [];
 
-  // Fetch own groups for lecturer only
-  const { data: userGroupsData, isLoading: groupsLoading } = useUserGroups(currentUserId);
+  // Fetch groups supervised by this lecturer
+  const { data: groupsData, isLoading: groupsLoading } = useGroups(
+    {
+      page: 0,
+      size: 100,
+      lecturerId: currentUserId > 0 ? currentUserId : undefined,
+      semesterId: selectedSemester ? Number(selectedSemester) : undefined,
+    },
+    { enabled: currentUserId > 0 }
+  );
   const groups = useMemo(() => {
-    const memberships = userGroupsData?.groups || [];
-    const semesterId = selectedSemester ? Number(selectedSemester) : undefined;
-    const filtered = semesterId
-      ? memberships.filter((group) => group.semesterId === semesterId)
-      : memberships;
-
-    return filtered.map((group) => ({
-      id: group.groupId,
+    const content = groupsData?.content || [];
+    return content.map((group) => ({
+      id: group.id,
       groupName: group.groupName,
     }));
-  }, [selectedSemester, userGroupsData]);
+  }, [groupsData]);
 
   // Get active group
   const activeGroupId = selectedGroupId ? Number(selectedGroupId) : (groups[0]?.id || 0);
@@ -169,7 +173,7 @@ export default function LecturerTasks() {
             </div>
             <div className="stat-card lecturer-metrics-card">
               <div className="stat-value lecturer-metrics-value">
-                {Math.round(progress.completionRate * 100)}%
+                {toPercentLabel(progress.completionRate)}
               </div>
               <div className="stat-label">Completion</div>
             </div>

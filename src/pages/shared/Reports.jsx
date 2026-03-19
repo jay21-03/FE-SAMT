@@ -1,15 +1,24 @@
 import { useState, useMemo } from "react";
 import DashboardLayout from "../../layout/DashboardLayout";
-import { useReports, useGenerateReport, useDownloadReport } from "../../hooks/useReport";
-import { useGroups, useUserGroups } from "../../hooks/useUserGroups";
+import {
+  useReports,
+  useGenerateReport,
+  useGenerateCommitAnalysisReport,
+  useGenerateWorkDistributionReport,
+  useDownloadReport,
+  useRecentActivities,
+} from "../../hooks/useReport";
+import { useGroup, useGroups, useUserGroups } from "../../hooks/useUserGroups";
 import { useProjectConfigByGroup } from "../../hooks/useProjectConfigs";
 import { useProfile } from "../../hooks/useAuth";
+import { Navigate } from "react-router-dom";
+import { isStudentLeader } from "../../utils/access";
 
 export default function Reports() {
   const [page, setPage] = useState(0);
-  const [statusFilter, setStatusFilter] = useState("");
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [reportType, setReportType] = useState("SRS");
   const [useAi, setUseAi] = useState(true);
   const [exportType, setExportType] = useState("DOCX");
   const [successMessage, setSuccessMessage] = useState(null);
@@ -17,22 +26,26 @@ export default function Reports() {
 
   const query = useMemo(() => {
     const q = { page, size: 10 };
-    if (statusFilter) q.status = statusFilter;
     return q;
-  }, [page, statusFilter]);
+  }, [page]);
 
   const { data, isLoading, isFetching, refetch } = useReports(query);
   const { data: totalReportsData } = useReports({ page: 0, size: 1 });
   const { data: completedReportsData } = useReports({ page: 0, size: 1, status: "COMPLETED" });
-  const { data: processingReportsData } = useReports({ page: 0, size: 1, status: "PROCESSING" });
-  const { data: pendingReportsData } = useReports({ page: 0, size: 1, status: "PENDING" });
-  const { data: failedReportsData } = useReports({ page: 0, size: 1, status: "FAILED" });
   const { data: profile } = useProfile();
   const currentUserId = Number(profile?.id || 0);
   const currentRole = String(profile?.role || profile?.roles?.[0] || "").toUpperCase();
   const isStudent = currentRole === "STUDENT";
   const isLecturer = currentRole === "LECTURER";
   const isAdmin = currentRole === "ADMIN";
+  const { data: membershipsData } = useUserGroups(currentUserId);
+  const canStudentAccessReports = !isStudent || isStudentLeader(membershipsData);
+  const canGenerateAnalytics = isLecturer;
+  const selectedGroupNumber = selectedGroupId ? Number(selectedGroupId) : 0;
+
+  if (!canStudentAccessReports) {
+    return <Navigate to="/app/student/my-work" replace />;
+  }
 
   const { data: groupsData } = useGroups(
     { page: 0, size: 100, lecturerId: isLecturer ? currentUserId : undefined },
@@ -40,25 +53,154 @@ export default function Reports() {
   );
   const { data: userGroupsData } = useUserGroups(currentUserId);
   const { data: configData } = useProjectConfigByGroup(
-    selectedGroupId ? Number(selectedGroupId) : 0
+    selectedGroupNumber
+  );
+  const { data: groupData } = useGroup(selectedGroupNumber);
+  const { data: recentActivitiesData } = useRecentActivities(
+    selectedGroupNumber,
+    { page: 0, size: 100 },
   );
 
   const generateReport = useGenerateReport();
+  const generateWorkDistributionReport = useGenerateWorkDistributionReport();
+  const generateCommitAnalysisReport = useGenerateCommitAnalysisReport();
   const downloadReport = useDownloadReport();
-  const selectedConfig = configData?.data ?? configData ?? null;
+  const selectedConfig = configData?.data?.data ?? configData?.data ?? configData ?? null;
 
   const reports = data?.content || [];
   const totalPages = data?.totalPages || 0;
   const totalElements = data?.totalElements || 0;
   const allGroups = groupsData?.data?.content || groupsData?.content || [];
   const ownGroups = userGroupsData?.groups || [];
-  const groups = isStudent ? ownGroups : allGroups;
+  const groups = useMemo(() => {
+    const source = isStudent ? ownGroups : allGroups;
+    if (!Array.isArray(source)) return [];
+    return source.map((g) => ({
+      ...g,
+      groupId: g.groupId ?? g.id,
+    }));
+  }, [allGroups, isStudent, ownGroups]);
 
   const completedCount = completedReportsData?.totalElements ?? 0;
-  const processingCount =
-    (processingReportsData?.totalElements ?? 0) + (pendingReportsData?.totalElements ?? 0);
-  const failedCount = failedReportsData?.totalElements ?? 0;
   const totalReportsCount = totalReportsData?.totalElements ?? 0;
+
+  const normalizeIssueStatus = (rawStatus) => {
+    const s = String(rawStatus || "").toUpperCase();
+    if (s.includes("DONE") || s.includes("APPROVED") || s.includes("CLOSED")) return "DONE";
+    if (s.includes("IN_PROGRESS") || s.includes("IN DESIGN") || s.includes("IN_DESIGN")) return "IN_PROGRESS";
+    return "TODO";
+  };
+
+  const toKey = (value) => String(value || "").trim().toLowerCase();
+
+  const isJiraActivity = (activity) => {
+    const source = String(activity?.source || "").toUpperCase();
+    if (source) return source === "JIRA";
+    const type = String(activity?.type || "").toUpperCase();
+    const title = String(activity?.title || "").toUpperCase();
+    return type.includes("JIRA") || title.includes("JIRA-");
+  };
+
+  const isGithubActivity = (activity) => {
+    const source = String(activity?.source || "").toUpperCase();
+    if (source) return source === "GITHUB";
+    const type = String(activity?.type || "").toUpperCase();
+    const title = String(activity?.title || "").toUpperCase();
+    return type.includes("COMMIT") || type.includes("PULL") || title.includes("COMMIT");
+  };
+
+  const toIsoDate = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
+  };
+
+  const buildAnalyticsPayload = () => {
+    const members = Array.isArray(groupData?.members)
+      ? groupData.members.map((m) => ({
+          id: String(m.userId),
+          name: m.fullName,
+          email: m.email || "",
+          githubUsername: m.githubUsername || "",
+        }))
+      : [];
+
+    if (members.length === 0) {
+      throw new Error("No group members found for analytics report.");
+    }
+
+    const memberLookup = new Map();
+    (groupData?.members || []).forEach((member) => {
+      const memberId = String(member?.userId || "").trim();
+      if (!memberId) return;
+      [
+        member?.fullName,
+        member?.email,
+        member?.jiraAccountId,
+        member?.githubUsername,
+      ]
+        .map(toKey)
+        .filter(Boolean)
+        .forEach((key) => memberLookup.set(key, memberId));
+    });
+
+    const memberIdByName = new Map(members.map((m) => [toKey(m.name), m.id]));
+    const fallbackMemberId = members[0]?.id;
+    const activities = recentActivitiesData?.content || [];
+
+    const jiraIssues = activities
+      .filter((activity) => isJiraActivity(activity))
+      .map((activity, idx) => {
+        const authorKey = toKey(activity?.author);
+        const assigneeId =
+          memberLookup.get(authorKey) || memberIdByName.get(authorKey) || fallbackMemberId;
+        const createdAt = toIsoDate(activity?.occurredAt);
+        const status = normalizeIssueStatus(activity?.status || activity?.type || activity?.title);
+        return {
+          id: String(activity?.externalId || activity?.activityId || `jira-${idx + 1}`),
+          assigneeId: String(assigneeId || ""),
+          status,
+          createdAt,
+          completedAt: status === "DONE" ? createdAt : null,
+          dueDate: null,
+        };
+      })
+      .filter((issue) => issue.assigneeId && issue.createdAt);
+
+    const gitCommits = activities
+      .filter((activity) => isGithubActivity(activity))
+      .map((activity) => {
+        const authorKey = toKey(activity?.author);
+        const authorId =
+          memberLookup.get(authorKey) || memberIdByName.get(authorKey) || fallbackMemberId;
+        return {
+          authorId: String(authorId || ""),
+          message: String(activity?.title || activity?.type || "Git commit"),
+          linesAdded: 0,
+          linesDeleted: 0,
+          timestamp: toIsoDate(activity?.occurredAt),
+        };
+      })
+      .filter((commit) => commit.authorId && commit.timestamp);
+
+    if (reportType === "WORK_DISTRIBUTION" && jiraIssues.length === 0) {
+      throw new Error("No Jira activities found for this group. Please sync Jira data and try again.");
+    }
+
+    if (reportType === "COMMIT_ANALYSIS" && gitCommits.length === 0) {
+      throw new Error("No GitHub commit activities found for this group. Please sync GitHub data and try again.");
+    }
+
+    return {
+      projectConfigId: String(selectedConfig.id),
+      groupId: String(selectedGroupNumber),
+      timeRange: { from: "", to: "" },
+      members,
+      jiraIssues,
+      gitCommits,
+    };
+  };
 
   const handleGenerate = async () => {
     if (!selectedConfig?.id) {
@@ -68,14 +210,23 @@ export default function Reports() {
     setSuccessMessage(null);
     setErrorMessage(null);
     try {
-      await generateReport.mutateAsync({
-        projectConfigId: String(selectedConfig.id),
-        useAi,
-        exportType,
-      });
+      if (reportType === "COMMIT_ANALYSIS") {
+        const payload = buildAnalyticsPayload();
+        await generateCommitAnalysisReport.mutateAsync(payload);
+      } else if (reportType === "WORK_DISTRIBUTION") {
+        const payload = buildAnalyticsPayload();
+        await generateWorkDistributionReport.mutateAsync(payload);
+      } else {
+        await generateReport.mutateAsync({
+          projectConfigId: String(selectedConfig.id),
+          useAi,
+          exportType,
+        });
+      }
       setSuccessMessage("Report generation started! It will appear in the list shortly.");
       setShowGenerateModal(false);
       setSelectedGroupId("");
+      setReportType("SRS");
       refetch();
     } catch (err) {
       setErrorMessage(err?.response?.data?.message || "Failed to generate report.");
@@ -100,9 +251,19 @@ export default function Reports() {
     return icons[status] || "◷";
   };
 
+  const parseCreatedAt = (value) => {
+    if (!value) return null;
+    const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(value);
+    const normalized = hasTimezone ? value : `${value}Z`;
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
-    const date = new Date(dateStr);
+    const date = parseCreatedAt(dateStr);
+    if (!date) return "-";
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
@@ -165,31 +326,10 @@ export default function Reports() {
             <div className="reports-stat-value">{completedCount}</div>
             <div className="reports-stat-label">Completed</div>
           </div>
-          <div className="reports-stat-card reports-stat-card-processing">
-            <div className="reports-stat-value">{processingCount}</div>
-            <div className="reports-stat-label">Processing</div>
-          </div>
-          <div className="reports-stat-card reports-stat-card-failed">
-            <div className="reports-stat-value">{failedCount}</div>
-            <div className="reports-stat-label">Failed</div>
-          </div>
         </div>
 
         {/* Filter Bar */}
         <div className="chip-filter-row">
-          <span className="chip-filter-label">Filter by Status:</span>
-          {["", "COMPLETED", "PROCESSING", "PENDING", "FAILED"].map((status) => (
-            <button
-              key={status}
-              onClick={() => {
-                setStatusFilter(status);
-                setPage(0);
-              }}
-              className={`chip-filter-btn ${statusFilter === status ? "active" : ""}`}
-            >
-              {status || "All"}
-            </button>
-          ))}
           <button
             onClick={() => refetch()}
             className="primary-button secondary compact-button chip-filter-refresh"
@@ -269,12 +409,12 @@ export default function Reports() {
                         </div>
                         {report.createdAt && (
                           <div className="reports-created-sub">
-                            {new Date(report.createdAt).toLocaleString("en-US", {
+                            {parseCreatedAt(report.createdAt)?.toLocaleString("en-US", {
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",
                               minute: "2-digit",
-                            })}
+                            }) || "-"}
                           </div>
                         )}
                       </td>
@@ -364,11 +504,24 @@ export default function Reports() {
               <div className="reports-modal-icon">
                 📄
               </div>
-              <h2 className="reports-modal-title">Generate SRS Report</h2>
+              <h2 className="reports-modal-title">Generate Report</h2>
               <p className="reports-modal-subtitle">
-                Create documentation from your project data
+                Create report from your project data
               </p>
             </div>
+
+            <label className="modal-field">
+              <span className="reports-field-title">Report Type</span>
+              <select
+                value={reportType}
+                onChange={(e) => setReportType(e.target.value)}
+                className="reports-select"
+              >
+                <option value="SRS">SRS</option>
+                {canGenerateAnalytics && <option value="WORK_DISTRIBUTION">Jira Work Distribution (Excel)</option>}
+                {canGenerateAnalytics && <option value="COMMIT_ANALYSIS">Commit Analysis (Excel)</option>}
+              </select>
+            </label>
 
             <label className="modal-field">
               <span className="reports-field-title">Select Group *</span>
@@ -411,32 +564,34 @@ export default function Reports() {
               </div>
             )}
 
-            <div className="reports-modal-grid">
-              <label className="modal-field reports-modal-field-reset">
-                <span className="reports-field-title">Export Format</span>
-                <select
-                  value={exportType}
-                  onChange={(e) => setExportType(e.target.value)}
-                  className="reports-select"
-                >
-                  <option value="DOCX">📘 DOCX (Word)</option>
-                  <option value="PDF">📕 PDF</option>
-                </select>
-              </label>
-              <div className="reports-ai-col">
-                <label className={`reports-ai-toggle ${useAi ? "active" : ""}`}>
-                  <input
-                    type="checkbox"
-                    checked={useAi}
-                    onChange={(e) => setUseAi(e.target.checked)}
-                    className="reports-ai-checkbox"
-                  />
-                  <span className="reports-ai-label">
-                    🤖 Use AI
-                  </span>
+            {reportType === "SRS" && (
+              <div className="reports-modal-grid">
+                <label className="modal-field reports-modal-field-reset">
+                  <span className="reports-field-title">Export Format</span>
+                  <select
+                    value={exportType}
+                    onChange={(e) => setExportType(e.target.value)}
+                    className="reports-select"
+                  >
+                    <option value="DOCX">📘 DOCX (Word)</option>
+                    <option value="PDF">📕 PDF</option>
+                  </select>
                 </label>
+                <div className="reports-ai-col">
+                  <label className={`reports-ai-toggle ${useAi ? "active" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={useAi}
+                      onChange={(e) => setUseAi(e.target.checked)}
+                      className="reports-ai-checkbox"
+                    />
+                    <span className="reports-ai-label">
+                      🤖 Use AI
+                    </span>
+                  </label>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="reports-modal-actions">
               <button
@@ -444,6 +599,7 @@ export default function Reports() {
                 onClick={() => {
                   setShowGenerateModal(false);
                   setSelectedGroupId("");
+                  setReportType("SRS");
                 }}
               >
                 Cancel
@@ -455,10 +611,14 @@ export default function Reports() {
                   !selectedGroupId ||
                   !selectedConfig?.id ||
                   selectedConfig?.state !== "VERIFIED" ||
-                  generateReport.isPending
+                  generateReport.isPending ||
+                  generateWorkDistributionReport.isPending ||
+                  generateCommitAnalysisReport.isPending
                 }
               >
-                {generateReport.isPending ? "Generating..." : "Generate Report"}
+                {generateReport.isPending || generateWorkDistributionReport.isPending || generateCommitAnalysisReport.isPending
+                  ? "Generating..."
+                  : "Generate Report"}
               </button>
             </div>
           </div>

@@ -6,7 +6,7 @@ const {
   navigateMock,
   useProfileMock,
   useSemestersMock,
-  useUserGroupsMock,
+  useGroupsMock,
   useLecturerOverviewMock,
   useGroupProgressMock,
   useRecentActivitiesMock,
@@ -14,7 +14,7 @@ const {
   navigateMock: vi.fn(),
   useProfileMock: vi.fn(),
   useSemestersMock: vi.fn(),
-  useUserGroupsMock: vi.fn(),
+  useGroupsMock: vi.fn(),
   useLecturerOverviewMock: vi.fn(),
   useGroupProgressMock: vi.fn(),
   useRecentActivitiesMock: vi.fn(),
@@ -38,7 +38,7 @@ vi.mock('../../hooks/useAuth', () => ({
 }))
 
 vi.mock('../../hooks/useUserGroups', () => ({
-  useUserGroups: (userId) => useUserGroupsMock(userId),
+  useGroups: (query, options) => useGroupsMock(query, options),
   useSemesters: () => useSemestersMock(),
 }))
 
@@ -53,15 +53,15 @@ describe('LecturerDashboard page', () => {
     navigateMock.mockReset()
     useProfileMock.mockReset()
     useSemestersMock.mockReset()
-    useUserGroupsMock.mockReset()
+    useGroupsMock.mockReset()
     useLecturerOverviewMock.mockReset()
     useGroupProgressMock.mockReset()
     useRecentActivitiesMock.mockReset()
 
     useProfileMock.mockReturnValue({ data: { id: 2 }, isLoading: false })
     useSemestersMock.mockReturnValue({ data: [{ id: 1, semesterCode: 'SU26', isActive: true }] })
-    useUserGroupsMock.mockReturnValue({
-      data: { groups: [{ groupId: 11, groupName: 'SE1705-G1', semesterId: 1, semesterCode: 'SU26' }] },
+    useGroupsMock.mockReturnValue({
+      data: { content: [{ id: 11, groupName: 'SE1705-G1', semesterId: 1, semesterCode: 'SU26' }] },
       isLoading: false,
     })
     useLecturerOverviewMock.mockReturnValue({

@@ -1,6 +1,7 @@
 import { api } from "./apiClient";
 import { unwrapApiData } from "./response";
 import type {
+  AnalyticsReportRequest,
   GenerateReportRequest,
   ReportsQuery,
   ReportResponse,
@@ -34,6 +35,37 @@ interface ApiResponse<T> {
   path: string;
 }
 
+const RECENT_ACTIVITIES_MIN_SIZE = 1;
+const RECENT_ACTIVITIES_MAX_SIZE = 100;
+
+const normalizeRecentActivitiesQuery = (
+  query?: RecentActivitiesQuery
+): RecentActivitiesQuery | undefined => {
+  if (!query) {
+    return query;
+  }
+
+  const normalized: RecentActivitiesQuery = { ...query };
+
+  if (typeof query.page === "number" && Number.isFinite(query.page)) {
+    normalized.page = Math.max(0, Math.trunc(query.page));
+  }
+
+  if (typeof query.size === "number" && Number.isFinite(query.size)) {
+    const size = Math.trunc(query.size);
+    normalized.size = Math.min(
+      RECENT_ACTIVITIES_MAX_SIZE,
+      Math.max(RECENT_ACTIVITIES_MIN_SIZE, size)
+    );
+  }
+
+  if (normalized.source === "ALL") {
+    delete normalized.source;
+  }
+
+  return normalized;
+};
+
 export const reportApi = {
   // ============ Report Management ============
 
@@ -43,6 +75,20 @@ export const reportApi = {
   async generateSrsReport(request: GenerateReportRequest): Promise<ReportResponse> {
     // Report generation (especially with AI) can take a while; override the default axios timeout.
     const { data } = await api.post<ApiResponse<ReportResponse>>("/api/reports/srs", request, {
+      timeout: 10 * 60 * 1000,
+    });
+    return unwrapApiData<ReportResponse>(data);
+  },
+
+  async generateWorkDistributionReport(request: AnalyticsReportRequest): Promise<ReportResponse> {
+    const { data } = await api.post<ApiResponse<ReportResponse>>("/api/reports/work-distribution", request, {
+      timeout: 10 * 60 * 1000,
+    });
+    return unwrapApiData<ReportResponse>(data);
+  },
+
+  async generateCommitAnalysisReport(request: AnalyticsReportRequest): Promise<ReportResponse> {
+    const { data } = await api.post<ApiResponse<ReportResponse>>("/api/reports/commit-analysis", request, {
       timeout: 10 * 60 * 1000,
     });
     return unwrapApiData<ReportResponse>(data);
@@ -178,9 +224,10 @@ export const reportApi = {
     groupId: number,
     query?: RecentActivitiesQuery
   ): Promise<PageResponse<RecentActivity>> {
+    const params = normalizeRecentActivitiesQuery(query);
     const { data } = await api.get<ApiResponse<PageResponse<RecentActivity>>>(
       `/api/reports/lecturer/groups/${groupId}/recent-activities`,
-      { params: query }
+      { params }
     );
     return unwrapApiData<PageResponse<RecentActivity>>(data);
   },

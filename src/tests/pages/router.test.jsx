@@ -28,6 +28,12 @@ vi.mock('../../pages/student/StudentDashboard.jsx', () => ({
     return <div>Student Dashboard {location.pathname}</div>
   },
 }))
+vi.mock('../../pages/student/StudentTeamBoard.jsx', () => ({
+  default: () => {
+    const location = useLocation()
+    return <div>Student Team Board {location.pathname}</div>
+  },
+}))
 vi.mock('../../pages/student/StudentStats.jsx', () => ({ default: () => <div>Student Stats</div> }))
 vi.mock('../../pages/student/StudentPermissions.jsx', () => ({ default: () => <div>Student Permissions</div> }))
 vi.mock('../../pages/shared/UserProfile.jsx', () => ({ default: () => <div>User Profile</div> }))
@@ -93,6 +99,11 @@ describe('AppRouter', () => {
     expect(screen.getByText('Reports Page')).toBeInTheDocument()
   })
 
+  it('renders shared reports route for STUDENT role', () => {
+    renderRouter('/app/reports', 'STUDENT')
+    expect(screen.getByText('Reports Page')).toBeInTheDocument()
+  })
+
   it('renders student route for STUDENT role', () => {
     renderRouter('/app/student/profile/me', 'STUDENT')
     expect(screen.getByText('Student Dashboard /app/student/my-work')).toBeInTheDocument()
@@ -100,7 +111,7 @@ describe('AppRouter', () => {
 
   it('renders team board route for STUDENT role', () => {
     renderRouter('/app/student/team-board', 'STUDENT')
-    expect(screen.getByText('Student Dashboard /app/student/team-board')).toBeInTheDocument()
+    expect(screen.getByText('Student Team Board /app/student/team-board')).toBeInTheDocument()
   })
 
   it('renders my work route for STUDENT role', () => {

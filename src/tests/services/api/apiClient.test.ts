@@ -88,6 +88,22 @@ describe('apiClient interceptors', () => {
     expect(config.headers.get('Authorization')).toBe('Bearer access-123')
   })
 
+  it('does not add bearer token for public auth endpoints', async () => {
+    tokenStore.setTokens({ accessToken: 'stale-access', refreshToken: 'stale-refresh' })
+
+    const requestInterceptor = interceptorCallbacks.request
+    expect(requestInterceptor).toBeTypeOf('function')
+    if (!requestInterceptor) throw new Error('request interceptor missing')
+
+    const config = await requestInterceptor({ url: '/api/auth/login', headers: {} })
+    const authorization =
+      typeof config.headers?.get === 'function'
+        ? config.headers.get('Authorization')
+        : config.headers?.Authorization
+
+    expect(authorization).toBeUndefined()
+  })
+
   it('refreshes token and retries request for non-auth 401 responses', async () => {
     tokenStore.setTokens({ accessToken: 'expired-token', refreshToken: 'refresh-token' })
 

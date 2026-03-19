@@ -5,39 +5,15 @@ import StudentDashboard from '../../pages/student/StudentDashboard'
 const {
   useProfileMock,
   useUserGroupsMock,
-  useGroupMock,
-  useGroupMembersMock,
-  useLeaderGroupTasksMock,
   useMemberTasksMock,
-  useLeaderGroupProgressMock,
-  useLeaderCommitSummaryMock,
-  useMemberTaskStatsMock,
-  useMemberCommitStatsMock,
-  useUpdateLeaderTaskStatusMock,
+  useStudentContributionMock,
   useUpdateMemberTaskStatusMock,
-  useAssignLeaderTaskMock,
-  updateLeaderTaskStatusAsyncMock,
-  updateMemberTaskStatusAsyncMock,
-  assignLeaderTaskAsyncMock,
-  mockPathname,
 } = vi.hoisted(() => ({
   useProfileMock: vi.fn(),
   useUserGroupsMock: vi.fn(),
-  useGroupMock: vi.fn(),
-  useGroupMembersMock: vi.fn(),
-  useLeaderGroupTasksMock: vi.fn(),
   useMemberTasksMock: vi.fn(),
-  useLeaderGroupProgressMock: vi.fn(),
-  useLeaderCommitSummaryMock: vi.fn(),
-  useMemberTaskStatsMock: vi.fn(),
-  useMemberCommitStatsMock: vi.fn(),
-  useUpdateLeaderTaskStatusMock: vi.fn(),
+  useStudentContributionMock: vi.fn(),
   useUpdateMemberTaskStatusMock: vi.fn(),
-  useAssignLeaderTaskMock: vi.fn(),
-  updateLeaderTaskStatusAsyncMock: vi.fn(),
-  updateMemberTaskStatusAsyncMock: vi.fn(),
-  assignLeaderTaskAsyncMock: vi.fn(),
-  mockPathname: { value: '/app/student/my-work' },
 }))
 
 vi.mock('react-router-dom', () => ({
@@ -46,7 +22,6 @@ vi.mock('react-router-dom', () => ({
       {children}
     </a>
   ),
-  useLocation: () => ({ pathname: mockPathname.value }),
 }))
 
 vi.mock('../../layout/DashboardLayout', () => ({
@@ -59,41 +34,21 @@ vi.mock('../../hooks/useAuth', () => ({
 
 vi.mock('../../hooks/useUserGroups', () => ({
   useUserGroups: (userId) => useUserGroupsMock(userId),
-  useGroup: (groupId) => useGroupMock(groupId),
-  useGroupMembers: (groupId) => useGroupMembersMock(groupId),
 }))
 
 vi.mock('../../hooks/useReport', () => ({
-  useLeaderGroupTasks: (groupId, query) => useLeaderGroupTasksMock(groupId, query),
   useMemberTasks: (query) => useMemberTasksMock(query),
-  useLeaderGroupProgress: (groupId, query) => useLeaderGroupProgressMock(groupId, query),
-  useLeaderCommitSummary: (groupId, query) => useLeaderCommitSummaryMock(groupId, query),
-  useMemberTaskStats: (groupId) => useMemberTaskStatsMock(groupId),
-  useMemberCommitStats: (groupId, query) => useMemberCommitStatsMock(groupId, query),
-  useUpdateLeaderTaskStatus: () => useUpdateLeaderTaskStatusMock(),
+  useStudentContribution: (query) => useStudentContributionMock(query),
   useUpdateMemberTaskStatus: () => useUpdateMemberTaskStatusMock(),
-  useAssignLeaderTask: () => useAssignLeaderTaskMock(),
 }))
 
 describe('StudentDashboard page', () => {
   beforeEach(() => {
     useProfileMock.mockReset()
     useUserGroupsMock.mockReset()
-    useGroupMock.mockReset()
-    useGroupMembersMock.mockReset()
-    useLeaderGroupTasksMock.mockReset()
     useMemberTasksMock.mockReset()
-    useLeaderGroupProgressMock.mockReset()
-    useLeaderCommitSummaryMock.mockReset()
-    useMemberTaskStatsMock.mockReset()
-    useMemberCommitStatsMock.mockReset()
-    useUpdateLeaderTaskStatusMock.mockReset()
+    useStudentContributionMock.mockReset()
     useUpdateMemberTaskStatusMock.mockReset()
-    useAssignLeaderTaskMock.mockReset()
-    updateLeaderTaskStatusAsyncMock.mockReset()
-    updateMemberTaskStatusAsyncMock.mockReset()
-    assignLeaderTaskAsyncMock.mockReset()
-    mockPathname.value = '/app/student/my-work'
 
     useProfileMock.mockReturnValue({
       data: { id: 21, fullName: 'Student A' },
@@ -102,18 +57,6 @@ describe('StudentDashboard page', () => {
 
     useUserGroupsMock.mockReturnValue({
       data: { groups: [{ groupId: 12, groupName: 'SE1705-G1', semesterCode: 'SU26', role: 'MEMBER' }] },
-      isLoading: false,
-    })
-
-    useGroupMembersMock.mockReturnValue({ data: [{ userId: 31, fullName: 'Member One' }] })
-    useGroupMock.mockReturnValue({
-      data: {
-        members: [{ userId: 31, fullName: 'Member One', role: 'MEMBER' }],
-      },
-    })
-
-    useLeaderGroupTasksMock.mockReturnValue({
-      data: { content: [], totalPages: 0, totalElements: 0 },
       isLoading: false,
     })
 
@@ -161,30 +104,18 @@ describe('StudentDashboard page', () => {
       }
     })
 
-    useLeaderGroupProgressMock.mockReturnValue({ data: { todoCount: 0, inProgressCount: 0, doneCount: 0, completionRate: 0 } })
-    useLeaderCommitSummaryMock.mockReturnValue({ data: { totalCommits: 0, totalPullRequests: 0, activeContributors: 0 } })
-
-    useMemberTaskStatsMock.mockReturnValue({
+    useStudentContributionMock.mockReturnValue({
       data: {
-        totalAssigned: 10,
-        completed: 7,
-        inProgress: 2,
-        todo: 1,
-        completionRate: 0.7,
+        taskCount: 10,
+        completedTaskCount: 7,
+        githubCommitCount: 14,
+        githubPrCount: 3,
+        contributionScore: 70,
+        recentHighlights: [],
       },
     })
 
-    useMemberCommitStatsMock.mockReturnValue({
-      data: {
-        commitCount: 14,
-        prCount: 3,
-        activeDays: 6,
-      },
-    })
-
-    useUpdateLeaderTaskStatusMock.mockReturnValue({ mutateAsync: updateLeaderTaskStatusAsyncMock, isPending: false })
-    useUpdateMemberTaskStatusMock.mockReturnValue({ mutateAsync: updateMemberTaskStatusAsyncMock, isPending: false })
-    useAssignLeaderTaskMock.mockReturnValue({ mutateAsync: assignLeaderTaskAsyncMock, isPending: false })
+    useUpdateMemberTaskStatusMock.mockReturnValue({ mutateAsync: vi.fn(), isPending: false })
   })
 
   afterEach(() => {
@@ -206,8 +137,7 @@ describe('StudentDashboard page', () => {
       data: { content: [], totalPages: 0, totalElements: 0 },
       isLoading: false,
     })
-    useMemberTaskStatsMock.mockReturnValue({ data: undefined })
-    useMemberCommitStatsMock.mockReturnValue({ data: undefined })
+    useStudentContributionMock.mockReturnValue({ data: undefined })
 
     render(<StudentDashboard />)
 
@@ -218,12 +148,11 @@ describe('StudentDashboard page', () => {
   it('renders task list and contribution summary in success state', () => {
     render(<StudentDashboard />)
 
-    expect(screen.getAllByText('My Work').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('My Tasks').length).toBeGreaterThan(0)
     expect(screen.getByText('TASK-1')).toBeInTheDocument()
     expect(screen.getByText('Implement feature')).toBeInTheDocument()
     expect(screen.getByText(/Group:\s*SE1705-G1/)).toBeInTheDocument()
-    expect(screen.getByText('Total Assigned')).toBeInTheDocument()
-    expect(screen.getByText('Commits')).toBeInTheDocument()
+    expect(screen.getByText('GitHub Commits')).toBeInTheDocument()
   })
 
   it('applies TODO filter and re-queries tasks with status', async () => {
@@ -237,50 +166,29 @@ describe('StudentDashboard page', () => {
     expect(screen.getByText('TASK-2')).toBeInTheDocument()
   })
 
-  it('renders leader controls and uses leader hooks when role is LEADER', () => {
-    mockPathname.value = '/app/student/team-board'
-    useUserGroupsMock.mockReturnValue({
-      data: { groups: [{ groupId: 12, groupName: 'SE1705-G1', semesterCode: 'SU26', role: 'LEADER' }] },
-      isLoading: false,
-    })
-    useLeaderGroupTasksMock.mockReturnValue({
-      data: {
-        content: [{
-          taskId: 'L-1',
-          key: 'L-1',
-          title: 'Leader task',
-          source: 'JIRA',
-          status: 'TODO',
-          priority: 'MEDIUM',
-          updatedAt: '2026-03-11T08:00:00.000Z',
-          url: 'https://jira.local/L-1',
-        }],
-        totalPages: 1,
-        totalElements: 1,
-      },
-      isLoading: false,
-    })
-
+  it('maps In Design and Approved filters to backend statuses', async () => {
     render(<StudentDashboard />)
 
-    expect(screen.getByText('Team Statistics')).toBeInTheDocument()
-    expect(screen.getByText('Member')).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Member One' })).toBeInTheDocument()
-    expect(screen.getAllByText('Assign').length).toBeGreaterThan(0)
-    expect(useLeaderGroupTasksMock).toHaveBeenCalledWith(12, { page: 0, size: 10 })
-  })
-
-  it('uses personal member hooks on my-work even when selected role is LEADER', () => {
-    mockPathname.value = '/app/student/my-work'
-    useUserGroupsMock.mockReturnValue({
-      data: { groups: [{ groupId: 12, groupName: 'SE1705-G1', semesterCode: 'SU26', role: 'LEADER' }] },
-      isLoading: false,
+    fireEvent.click(screen.getByRole('button', { name: 'In Design' }))
+    await waitFor(() => {
+      expect(useMemberTasksMock).toHaveBeenLastCalledWith({
+        groupId: 12,
+        page: 0,
+        size: 10,
+        status: 'IN_PROGRESS',
+      })
     })
 
-    render(<StudentDashboard />)
-
-    expect(screen.getByText('My Statistics')).toBeInTheDocument()
-    expect(useLeaderGroupTasksMock).toHaveBeenCalledWith(0, { page: 0, size: 10 })
-    expect(useMemberTasksMock).toHaveBeenCalledWith({ groupId: 12, page: 0, size: 10 })
+    fireEvent.click(screen.getByRole('button', { name: 'Approved' }))
+    await waitFor(() => {
+      expect(useMemberTasksMock).toHaveBeenLastCalledWith({
+        groupId: 12,
+        page: 0,
+        size: 10,
+        status: 'DONE',
+      })
+    })
   })
+
+  // Team-board and leader features are covered by separate pages/components.
 })

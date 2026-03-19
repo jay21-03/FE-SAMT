@@ -11,6 +11,8 @@ export default function ProjectConfigList() {
   const [activeTab, setActiveTab] = useState("active");
   const [search, setSearch] = useState("");
   const [semesterFilter, setSemesterFilter] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
 
   // Restore state
   const [restoreConfigId, setRestoreConfigId] = useState("");
@@ -66,11 +68,13 @@ export default function ProjectConfigList() {
   };
 
   const { data: groupsData, isLoading } = useGroups({
-    page: 0,
-    size: 100,
+    page,
+    size: pageSize,
     semesterId: semesterFilter ? parseInt(semesterFilter, 10) : undefined,
   });
   const { data: semesters } = useSemesters();
+  const totalPages = groupsData?.totalPages || 0;
+  const totalElements = groupsData?.totalElements || 0;
 
   const columns = [
     { key: "groupName", header: "Group" },
@@ -125,13 +129,19 @@ export default function ProjectConfigList() {
         <div className="tabs">
           <button
             className={`tab-button ${activeTab === "active" ? "active" : ""}`}
-            onClick={() => setActiveTab("active")}
+            onClick={() => {
+              setActiveTab("active");
+              setPage(0);
+            }}
           >
-            Active Groups ({rows.length})
+            Active Groups ({totalElements})
           </button>
           <button
             className={`tab-button tab-danger ${activeTab === "deleted" ? "active" : ""}`}
-            onClick={() => setActiveTab("deleted")}
+            onClick={() => {
+              setActiveTab("deleted");
+              setPage(0);
+            }}
           >
             Deleted Configs ({deletedConfigs.length})
           </button>
@@ -147,12 +157,18 @@ export default function ProjectConfigList() {
             <div className="filter-row filter-row-gap-12">
               <DebouncedSearchInput
                 placeholder="Search group or lecturer..."
-                onChange={(value) => setSearch(value)}
+                onChange={(value) => {
+                  setSearch(value);
+                  setPage(0);
+                }}
               />
               <select
                 className="select-input"
                 value={semesterFilter}
-                onChange={(e) => setSemesterFilter(e.target.value)}
+                onChange={(e) => {
+                  setSemesterFilter(e.target.value);
+                  setPage(0);
+                }}
               >
                 <option value="">All semesters</option>
                 {semesters?.map((sem) => (
@@ -169,6 +185,30 @@ export default function ProjectConfigList() {
               loading={isLoading}
               emptyMessage="No groups found."
             />
+
+            {totalPages > 1 && (
+              <div className="reports-pagination" style={{ marginTop: 16 }}>
+                <span className="reports-pagination-text">
+                  Page {page + 1} of {totalPages} ({totalElements} total groups)
+                </span>
+                <div className="reports-pagination-actions">
+                  <button
+                    className="primary-button secondary compact-button"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                  >
+                    ← Previous
+                  </button>
+                  <button
+                    className="primary-button secondary compact-button"
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={page >= totalPages - 1}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="panel panel-mt-16">
               <div className="panel-header">

@@ -5,9 +5,19 @@ import { useSecurityEvents, useAuditRange, useAuditByActor } from "../../hooks/u
 import { useUsers } from "../../hooks/useUserGroups";
 
 export default function AuditLogs() {
-  const [filterType, setFilterType] = useState("security");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const toIsoDate = (d) => {
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return "";
+    return dt.toISOString().slice(0, 10);
+  };
+  const today = new Date();
+  const weekAgo = new Date();
+  weekAgo.setDate(today.getDate() - 7);
+
+  // Default to range view so admins can see lifecycle events like SOFT_DELETE.
+  const [filterType, setFilterType] = useState("range");
+  const [startDate, setStartDate] = useState(toIsoDate(weekAgo));
+  const [endDate, setEndDate] = useState(toIsoDate(today));
   const [actorFilter, setActorFilter] = useState("");
   const [page, setPage] = useState(0);
   const pageSize = 20;

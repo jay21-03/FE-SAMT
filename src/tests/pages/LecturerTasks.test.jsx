@@ -4,13 +4,13 @@ import LecturerTasks from '../../pages/lecturer/LecturerTasks'
 
 const {
   useSemestersMock,
-  useUserGroupsMock,
+  useGroupsMock,
   useProfileMock,
   useGroupProgressMock,
   useRecentActivitiesMock,
 } = vi.hoisted(() => ({
   useSemestersMock: vi.fn(),
-  useUserGroupsMock: vi.fn(),
+  useGroupsMock: vi.fn(),
   useProfileMock: vi.fn(),
   useGroupProgressMock: vi.fn(),
   useRecentActivitiesMock: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('../../layout/DashboardLayout', () => ({
 
 vi.mock('../../hooks/useUserGroups', () => ({
   useSemesters: () => useSemestersMock(),
-  useUserGroups: (userId) => useUserGroupsMock(userId),
+  useGroups: (query, options) => useGroupsMock(query, options),
 }))
 
 vi.mock('../../hooks/useAuth', () => ({
@@ -45,16 +45,16 @@ vi.mock('../../hooks/useReport', () => ({
 describe('LecturerTasks page', () => {
   beforeEach(() => {
     useSemestersMock.mockReset()
-    useUserGroupsMock.mockReset()
+    useGroupsMock.mockReset()
     useProfileMock.mockReset()
     useGroupProgressMock.mockReset()
     useRecentActivitiesMock.mockReset()
 
     useProfileMock.mockReturnValue({ data: { id: 101, role: 'LECTURER' } })
     useSemestersMock.mockReturnValue({ data: [{ id: 1, semesterCode: 'SU26', isActive: true }] })
-    useUserGroupsMock.mockReturnValue({
+    useGroupsMock.mockReturnValue({
       data: {
-        groups: [{ groupId: 7, groupName: 'SE1705-G1', semesterId: 1, semesterCode: 'SU26' }],
+        content: [{ id: 7, groupName: 'SE1705-G1', semesterId: 1, semesterCode: 'SU26' }],
       },
       isLoading: false,
     })
@@ -111,7 +111,7 @@ describe('LecturerTasks page', () => {
   })
 
   it('shows loading state when groups or activities are loading', () => {
-    useUserGroupsMock.mockReturnValue({ data: { groups: [] }, isLoading: true })
+    useGroupsMock.mockReturnValue({ data: { content: [] }, isLoading: true })
     useRecentActivitiesMock.mockReturnValue({ data: { content: [] }, isLoading: true })
 
     render(<LecturerTasks />)

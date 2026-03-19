@@ -31,6 +31,15 @@ const refreshClient = axios.create({
 let isRefreshing = false
 let refreshPromise: Promise<AuthTokens> | null = null
 
+function isPublicAuthEndpoint(url: string): boolean {
+  return (
+    url.includes("/api/auth/login") ||
+    url.includes("/api/auth/register") ||
+    url.includes("/api/auth/logout") ||
+    url.includes("/api/auth/refresh")
+  )
+}
+
 function withBearer(token: string): string {
   return `Bearer ${token}`
 }
@@ -40,7 +49,11 @@ function unwrapAuthTokens(payload: any): AuthTokens {
 }
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const url = config.url ?? ""
+  if (isPublicAuthEndpoint(url)) return config
+
   const accessToken = tokenStore.getAccessToken()
+
   if (!accessToken) return config
 
   const headers = config.headers instanceof AxiosHeaders ? config.headers : new AxiosHeaders(config.headers)
@@ -49,20 +62,21 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config
 })
 
-async function runRefreshFlow(): Promise<AuthTokens> {
+function runRefreshFlow(): Promise<AuthTokens> {
   const refreshToken = tokenStore.getRefreshToken()
   if (!refreshToken) {
-    throw new Error("Missing refresh token")
+    return Promise.reject(new Error("Missing refresh token"))
   }
 
   const payload: RefreshTokenRequest = { refreshToken }
-  const { data } = await refreshClient.post<unknown>("/api/auth/refresh", payload)
-  const tokens = unwrapAuthTokens(data)
-  tokenStore.setTokens({
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
+  return refreshClient.post<unknown>("/api/auth/refresh", payload).then(({ data }) => {
+    const tokens = unwrapAuthTokens(data)
+    tokenStore.setTokens({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    })
+    return tokens
   })
-  return tokens
 }
 
 api.interceptors.response.use(
@@ -78,12 +92,7 @@ api.interceptors.response.use(
     const url = originalConfig.url ?? ""
 
     // Never run refresh flow for public auth endpoints.
-    if (
-      url.includes("/api/auth/login") ||
-      url.includes("/api/auth/register") ||
-      url.includes("/api/auth/logout") ||
-      url.includes("/api/auth/refresh")
-    ) {
+    if (isPublicAuthEndpoint(url)) {
       tokenStore.clear()
       throw error
     }
@@ -92,9 +101,16 @@ api.interceptors.response.use(
 
     if (!isRefreshing) {
       isRefreshing = true
-      refreshPromise = runRefreshFlow().finally(() => {
-        isRefreshing = false
-      })
+      refreshPromise = runRefreshFlow().then(
+        (tokens) => {
+          isRefreshing = false
+          return tokens
+        },
+        (e) => {
+          isRefreshing = false
+          throw e
+        },
+      )
     }
 
     try {

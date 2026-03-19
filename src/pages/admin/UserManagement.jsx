@@ -134,7 +134,11 @@ export default function UserManagement() {
     // Handle both wrapped (data.data.content) and unwrapped (data.content) responses
     const logs = auditData?.data?.content || auditData?.content || [];
     return logs
-      .filter((log) => log.action === "SOFT_DELETE" && log.entityType === "User")
+      .filter((log) => {
+        const action = String(log?.action || "").toUpperCase();
+        const entityType = String(log?.entityType || "").toUpperCase();
+        return action === "SOFT_DELETE" && entityType === "USER";
+      })
       .map((log) => ({
         id: log.entityId,
         deletedAt: log.timestamp,

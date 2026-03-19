@@ -32,12 +32,47 @@ describe('reportApi', () => {
     const metadata = await reportApi.getReport('r-1')
     const list = await reportApi.listReports({ page: 0, size: 10 })
 
-    expect(postMock).toHaveBeenCalledWith('/api/reports/srs', { projectConfigId: '1', useAi: true, exportType: 'DOCX' })
+    expect(postMock).toHaveBeenCalledWith(
+      '/api/reports/srs',
+      { projectConfigId: '1', useAi: true, exportType: 'DOCX' },
+      { timeout: 10 * 60 * 1000 },
+    )
     expect(getMock).toHaveBeenCalledWith('/api/reports/r-1')
     expect(getMock).toHaveBeenCalledWith('/api/reports', { params: { page: 0, size: 10 } })
     expect(generated).toEqual({ reportId: 'r-1' })
     expect(metadata).toEqual({ reportId: 'r-1', type: 'SRS' })
     expect(list).toEqual({ content: [{ reportId: 'r-1' }], totalElements: 1 })
+  })
+
+  it('generates work distribution and commit analysis reports', async () => {
+    postMock
+      .mockResolvedValueOnce({ data: { data: { reportId: 'wd-1' } } })
+      .mockResolvedValueOnce({ data: { data: { reportId: 'ca-1' } } })
+
+    const payload = {
+      projectConfigId: '1010',
+      groupId: '10',
+      timeRange: { from: '2026-03-01', to: '2026-03-10' },
+      members: [{ id: '1', name: 'Student One' }],
+      jiraIssues: [],
+      gitCommits: [],
+    }
+
+    const wd = await reportApi.generateWorkDistributionReport(payload)
+    const ca = await reportApi.generateCommitAnalysisReport(payload)
+
+    expect(postMock).toHaveBeenCalledWith(
+      '/api/reports/work-distribution',
+      payload,
+      { timeout: 10 * 60 * 1000 },
+    )
+    expect(postMock).toHaveBeenCalledWith(
+      '/api/reports/commit-analysis',
+      payload,
+      { timeout: 10 * 60 * 1000 },
+    )
+    expect(wd).toEqual({ reportId: 'wd-1' })
+    expect(ca).toEqual({ reportId: 'ca-1' })
   })
 
   it('downloads report and parses file name from content-disposition', async () => {
@@ -100,6 +135,16 @@ describe('reportApi', () => {
     expect(getMock).toHaveBeenCalledWith('/api/reports/lecturer/overview', { params: { from: '2026-01-01' } })
     expect(getMock).toHaveBeenCalledWith('/api/reports/lecturer/groups/10/progress', { params: { to: '2026-03-01' } })
     expect(getMock).toHaveBeenCalledWith('/api/reports/lecturer/groups/10/recent-activities', { params: { page: 0, size: 5 } })
+  })
+
+  it('sanitizes recent activities query params before request', async () => {
+    getMock.mockResolvedValue({ data: { data: { content: [] } } })
+
+    await reportApi.getRecentActivities(10, { page: -2, size: 500, source: 'ALL' })
+
+    expect(getMock).toHaveBeenCalledWith('/api/reports/lecturer/groups/10/recent-activities', {
+      params: { page: 0, size: 100 },
+    })
   })
 
   it('covers leader and member report endpoints', async () => {

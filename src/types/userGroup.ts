@@ -58,6 +58,8 @@ export interface MemberInfo {
   fullName: string
   email?: string | null
   role: GroupRole
+  jiraAccountId?: string | null
+  githubUsername?: string | null
 }
 
 export interface GroupDetail {

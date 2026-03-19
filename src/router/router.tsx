@@ -13,6 +13,7 @@ import LecturerDashboard from "../pages/lecturer/LecturerDashboard";
 import LecturerTasks from "../pages/lecturer/LecturerTasks";
 import LecturerGithubStats from "../pages/lecturer/LecturerGithubStats";
 import StudentDashboard from "../pages/student/StudentDashboard";
+import StudentTeamBoard from "../pages/student/StudentTeamBoard";
 import StudentStats from "../pages/student/StudentStats";
 import StudentPermissions from "../pages/student/StudentPermissions";
 import UserProfile from "../pages/shared/UserProfile";
@@ -79,7 +80,7 @@ export default function AppRouter() {
         path="/app/student/team-board"
         element={
           <ProtectedRoute allowedRoles={["STUDENT"]}>
-            <StudentDashboard />
+            <StudentTeamBoard />
           </ProtectedRoute>
         }
       />
@@ -208,7 +209,7 @@ export default function AppRouter() {
       <Route
         path="/app/reports"
         element={
-          <ProtectedRoute allowedRoles={["ADMIN", "LECTURER"]}>
+          <ProtectedRoute allowedRoles={["ADMIN", "LECTURER", "STUDENT"]}>
             <Reports />
           </ProtectedRoute>
         }

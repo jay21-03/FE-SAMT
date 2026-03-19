@@ -7,15 +7,19 @@ import DebouncedSearchInput from "../../components/DebouncedSearchInput";
 import { useGroups, useSemesters, useUserGroups, useUsers } from "../../hooks/useUserGroups";
 import { useProfile } from "../../hooks/useAuth";
 import { userGroupApi } from "../../api/userGroupApi";
+import { normalizeRole } from "../../utils/access";
 
 export default function GroupList() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [semesterFilter, setSemesterFilter] = useState("");
+  const [page, setPage] = useState(0);
   const { data: profile } = useProfile();
-  const role = String(profile?.role || profile?.roles?.[0] || "").toUpperCase();
+  const role = normalizeRole(profile?.role || profile?.roles?.[0]);
   const currentUserId = Number(profile?.id || 0);
-  const isOwnGroupOnlyRole = role === "LECTURER" || role === "STUDENT";
+  const isStudent = role === "STUDENT";
+  const isLecturer = role === "LECTURER";
+  const isAdmin = role === "ADMIN";
 
   // Create Group Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -28,16 +32,20 @@ export default function GroupList() {
   const [createError, setCreateError] = useState(null);
   const [createSuccess, setCreateSuccess] = useState(null);
 
-  const { data, isLoading: groupsLoading, refetch } = useGroups({
-    page: 0,
-    size: 50,
-    semesterId: semesterFilter ? parseInt(semesterFilter, 10) : undefined,
-  }, { enabled: !isOwnGroupOnlyRole });
+  const { data, isLoading: groupsLoading, refetch } = useGroups(
+    {
+      page,
+      size: 50,
+      semesterId: semesterFilter ? parseInt(semesterFilter, 10) : undefined,
+      lecturerId: isLecturer ? currentUserId : undefined,
+    },
+    { enabled: isAdmin || isLecturer }
+  );
   const { data: userGroupsData, isLoading: userGroupsLoading } = useUserGroups(currentUserId);
   const { data: semesters } = useSemesters();
   const { data: lecturersData } = useUsers(
     { role: "LECTURER", page: 0, size: 100 },
-    { enabled: role === "ADMIN", retry: false }
+    { enabled: isAdmin, retry: false }
   );
 
   const lecturers = lecturersData?.content || [];
@@ -116,7 +124,7 @@ export default function GroupList() {
   ];
 
   const rows = useMemo(() => {
-    const sourceGroups = isOwnGroupOnlyRole ? (userGroupsData?.groups || []) : (data?.content || []);
+    const sourceGroups = isStudent ? (userGroupsData?.groups || []) : (data?.content || []);
     const keyword = search.trim().toLowerCase();
     const semesterId = semesterFilter ? parseInt(semesterFilter, 10) : null;
     const mapped = sourceGroups
@@ -132,9 +140,12 @@ export default function GroupList() {
 
     if (!keyword) return mapped;
     return mapped.filter((group) => group.name.toLowerCase().includes(keyword));
-  }, [data, isOwnGroupOnlyRole, search, semesterFilter, userGroupsData]);
+  }, [data, isStudent, search, semesterFilter, userGroupsData]);
 
-  const isLoading = isOwnGroupOnlyRole ? userGroupsLoading : groupsLoading;
+  const isLoading = isStudent ? userGroupsLoading : groupsLoading;
+  const totalPages = data?.totalPages ?? 0;
+  const totalElements = data?.totalElements ?? 0;
+  const isPaged = !isStudent;
 
   return (
     <DashboardLayout>
@@ -156,12 +167,18 @@ export default function GroupList() {
         <div className="filter-row filter-row-gap-12">
           <DebouncedSearchInput
             placeholder="Search group name..."
-            onChange={(value) => setSearch(value)}
+            onChange={(value) => {
+              setSearch(value);
+              setPage(0);
+            }}
           />
           <select
             className="select-input"
             value={semesterFilter}
-            onChange={(e) => setSemesterFilter(e.target.value)}
+            onChange={(e) => {
+              setSemesterFilter(e.target.value);
+              setPage(0);
+            }}
           >
             <option value="">All semesters</option>
             {semesters?.map((sem) => (
@@ -178,6 +195,30 @@ export default function GroupList() {
           loading={isLoading}
           emptyMessage="No groups found."
         />
+
+        {isPaged && totalPages > 1 && (
+          <div className="reports-pagination" style={{ marginTop: 16 }}>
+            <span className="reports-pagination-text">
+              Page {page + 1} of {totalPages} ({totalElements} total groups)
+            </span>
+            <div className="reports-pagination-actions">
+              <button
+                className="primary-button secondary compact-button"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+              >
+                ← Previous
+              </button>
+              <button
+                className="primary-button secondary compact-button"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create Group Modal */}

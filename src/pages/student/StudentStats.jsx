@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useStudentGithubStats, useStudentContribution } from "../../hooks/useReport";
 import { useProfile } from "../../hooks/useAuth";
 import { useUserGroups } from "../../hooks/useUserGroups";
+import StudentWorkspaceTabs from "../../components/StudentWorkspaceTabs";
 
 export default function StudentStats() {
   const [selectedGroupId, setSelectedGroupId] = useState("");
@@ -33,7 +33,8 @@ export default function StudentStats() {
   const { data: githubStats, isLoading: githubLoading } = useStudentGithubStats(githubQuery);
 
   // Fetch contribution summary - only if groupId is valid
-  const { data: contribution, isLoading: contributionLoading } = useStudentContribution({ groupId });
+  // Keep contribution summary consistent with current date filters (if backend supports from/to).
+  const { data: contribution, isLoading: contributionLoading } = useStudentContribution(githubQuery);
 
   const stats = githubStats || {
     commitCount: 0,
@@ -67,14 +68,7 @@ export default function StudentStats() {
           </div>
         </div>
 
-        <div className="tab-row">
-          <Link className="tab" to="/app/student/profile/me">
-            My Tasks
-          </Link>
-          <Link className="tab tab-active" to="/app/student/stats">
-            My Stats
-          </Link>
-        </div>
+        <StudentWorkspaceTabs activeTab="my-stats" />
 
         {/* Filters */}
         <div className="panel student-stats-panel-top">

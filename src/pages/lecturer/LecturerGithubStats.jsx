@@ -3,13 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useLecturerOverview, useRecentActivities } from "../../hooks/useReport";
 import { useProfile } from "../../hooks/useAuth";
-import { useSemesters, useUserGroups } from "../../hooks/useUserGroups";
+import { useGroups, useSemesters } from "../../hooks/useUserGroups";
 
 export default function LecturerGithubStats() {
   const navigate = useNavigate();
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const { data: profile } = useProfile();
+  const currentUserId = Number(profile?.id || 0);
 
   // Fetch semesters
   const { data: semestersData } = useSemesters();
@@ -20,20 +21,23 @@ export default function LecturerGithubStats() {
     selectedSemester ? { semesterId: Number(selectedSemester) } : undefined
   );
 
-  // Fetch own groups for lecturer
-  const { data: membershipsData } = useUserGroups(Number(profile?.id || 0));
+  // Fetch groups supervised by this lecturer
+  const { data: groupsData } = useGroups(
+    {
+      page: 0,
+      size: 100,
+      lecturerId: currentUserId > 0 ? currentUserId : undefined,
+      semesterId: selectedSemester ? Number(selectedSemester) : undefined,
+    },
+    { enabled: currentUserId > 0 }
+  );
   const groups = useMemo(() => {
-    const memberships = membershipsData?.groups || [];
-    const semesterId = selectedSemester ? Number(selectedSemester) : undefined;
-    const filtered = semesterId
-      ? memberships.filter((group) => group.semesterId === semesterId)
-      : memberships;
-
-    return filtered.map((group) => ({
-      id: group.groupId,
+    const content = groupsData?.content || [];
+    return content.map((group) => ({
+      id: group.id,
       groupName: group.groupName,
     }));
-  }, [membershipsData, selectedSemester]);
+  }, [groupsData]);
   const hasSelectedGroup = selectedGroupId && groups.some((g) => g.id === Number(selectedGroupId));
 
   // Get active group

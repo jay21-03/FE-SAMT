@@ -3,9 +3,11 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DebouncedSearchInput from "../../components/DebouncedSearchInput";
-import { useGroup, useUserGroups, useUsers } from "../../hooks/useUserGroups";
+import { useGroup, useUserGroups } from "../../hooks/useUserGroups";
 import { useProfile } from "../../hooks/useAuth";
 import { userGroupApi } from "../../api/userGroupApi";
+import { memberIntegrationApi } from "../../api/memberIntegrationApi";
+import { canLecturerAccessGroup, canMemberAccessGroup, groupsHomePath, normalizeRole } from "../../utils/access";
 
 export default function GroupDetails() {
   const { groupId } = useParams();
@@ -13,18 +15,30 @@ export default function GroupDetails() {
   const queryClient = useQueryClient();
   const groupIdNumber = Number(groupId);
   const { data: profile } = useProfile();
-  const role = profile?.role || profile?.roles?.[0] || null;
+  const role = normalizeRole(profile?.role || profile?.roles?.[0]);
   const isAdmin = role === "ADMIN";
   const currentUserId = Number(profile?.id || 0);
+  const groupsHome = groupsHomePath(role);
 
   const [memberSearch, setMemberSearch] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [actionSuccess, setActionSuccess] = useState(null);
 
+  // Integrations modal
+  const [showIntegrationModal, setShowIntegrationModal] = useState(false);
+  const [integrationMember, setIntegrationMember] = useState(null);
+  const [integrationForm, setIntegrationForm] = useState({ jiraAccountId: "", githubUsername: "" });
+  const [integrationErrors, setIntegrationErrors] = useState({});
+  const [integrationLoading, setIntegrationLoading] = useState(false);
+  const [integrationLookupLoading, setIntegrationLookupLoading] = useState(false);
+  const [integrationError, setIntegrationError] = useState(null);
+  const [syncLoadingByUserId, setSyncLoadingByUserId] = useState({});
+
   // Add Member Modal
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [memberIdInput, setMemberIdInput] = useState("");
 
   // Delete Group Modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -32,18 +46,12 @@ export default function GroupDetails() {
   const { data: group, isLoading: groupLoading, refetch } = useGroup(groupIdNumber);
   const { data: membershipsData, isLoading: membershipsLoading } = useUserGroups(currentUserId);
   const canManageMembers = isAdmin || role === "LECTURER";
-  const { data: studentsData } = useUsers(
-    { role: "STUDENT", page: 0, size: 200 },
-    { enabled: canManageMembers, retry: false }
-  );
 
   const hasGroupAccess = useMemo(() => {
     if (isAdmin) return true;
-    const groups = membershipsData?.groups || [];
-    return groups.some((g) => g.groupId === groupIdNumber);
-  }, [groupIdNumber, isAdmin, membershipsData]);
-
-  const students = useMemo(() => studentsData?.content || [], [studentsData]);
+    if (role === "LECTURER") return canLecturerAccessGroup(group, currentUserId);
+    return canMemberAccessGroup(membershipsData, groupIdNumber);
+  }, [currentUserId, group, groupIdNumber, isAdmin, membershipsData, role]);
 
   const memberRows = useMemo(() => {
     if (!group?.members?.length) return [];
@@ -52,6 +60,8 @@ export default function GroupDetails() {
       fullName: member.fullName,
       email: member.email,
       role: member.role,
+      jiraAccountId: member.jiraAccountId,
+      githubUsername: member.githubUsername,
     }));
   }, [group]);
 
@@ -64,14 +74,14 @@ export default function GroupDetails() {
     );
   }, [memberRows, memberSearch]);
 
-  const availableStudents = useMemo(() => {
-    const memberIds = new Set(memberRows.map((m) => m.userId));
-    return students.filter((s) => !memberIds.has(s.id));
-  }, [students, memberRows]);
-
   const clearMessages = () => {
     setActionError(null);
     setActionSuccess(null);
+  };
+
+  const clearIntegrationMessages = () => {
+    setIntegrationError(null);
+    setIntegrationErrors({});
   };
 
   const refreshData = () => {
@@ -79,15 +89,131 @@ export default function GroupDetails() {
     queryClient.invalidateQueries({ queryKey: ["groups"] });
   };
 
+  const canEditIntegrationsForUserId = (userId) => {
+    if (!userId) return false;
+    if (isAdmin || role === "LECTURER") return true;
+    return Number(userId) === Number(currentUserId);
+  };
+
+  const openIntegrationModal = (member) => {
+    clearMessages();
+    clearIntegrationMessages();
+    setIntegrationMember(member);
+    setIntegrationForm({
+      jiraAccountId: member?.jiraAccountId || "",
+      githubUsername: member?.githubUsername || "",
+    });
+    setShowIntegrationModal(true);
+  };
+
+  const validateIntegrations = (values) => {
+    const next = {};
+    const jira = String(values?.jiraAccountId || "").trim();
+    const github = String(values?.githubUsername || "").trim();
+
+    if (!jira) {
+      next.jiraAccountId = "Jira accountId is required.";
+    } else if (jira.length < 5) {
+      next.jiraAccountId = "Jira accountId must be at least 5 characters.";
+    }
+
+    if (github) {
+      const re = /^[a-zA-Z0-9-]{1,39}$/;
+      if (!re.test(github)) {
+        next.githubUsername = "GitHub username is invalid (^[a-zA-Z0-9-]{1,39}$).";
+      }
+    }
+    return next;
+  };
+
+  const handleSaveIntegrations = async (e) => {
+    e.preventDefault();
+    clearMessages();
+    clearIntegrationMessages();
+
+    const errs = validateIntegrations(integrationForm);
+    if (Object.keys(errs).length) {
+      setIntegrationErrors(errs);
+      return;
+    }
+    if (!integrationMember?.userId) return;
+
+    setIntegrationLoading(true);
+    try {
+      await memberIntegrationApi.updateMemberIntegrations(Number(integrationMember.userId), {
+        jiraAccountId: integrationForm.jiraAccountId.trim(),
+        githubUsername: integrationForm.githubUsername.trim() || undefined,
+      });
+      setActionSuccess("Integration info updated successfully.");
+      setShowIntegrationModal(false);
+      setIntegrationMember(null);
+      refreshData();
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 400) setIntegrationError("Validation error. Please check your input.");
+      else if (status === 404) setIntegrationError("Member not found.");
+      else setIntegrationError("Unable to update integration info.");
+    } finally {
+      setIntegrationLoading(false);
+    }
+  };
+
+  const handleGetJiraFromEmail = async () => {
+    clearIntegrationMessages();
+    const email = integrationMember?.email;
+    if (!email) {
+      setIntegrationError("This member has no email to search on Jira.");
+      return;
+    }
+    setIntegrationLookupLoading(true);
+    try {
+      const { accountId } = await memberIntegrationApi.getJiraAccountId(String(email));
+      setIntegrationForm((prev) => ({ ...prev, jiraAccountId: accountId || "" }));
+    } catch (err) {
+      const status = err?.response?.status ?? err?.status;
+      if (status === 404) setIntegrationError("No Jira user found with this email.");
+      else if (status === 502) setIntegrationError("Jira service unavailable.");
+      else setIntegrationError("Unable to fetch Jira accountId.");
+    } finally {
+      setIntegrationLookupLoading(false);
+    }
+  };
+
+  const handleSyncJira = async (member) => {
+    if (!member?.userId) return;
+    clearMessages();
+    const userId = Number(member.userId);
+    setSyncLoadingByUserId((prev) => ({ ...prev, [userId]: true }));
+    try {
+      await memberIntegrationApi.syncJira(userId);
+      setActionSuccess("Synced successfully.");
+      refreshData();
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 404) setActionError("User not found on Jira.");
+      else if (status === 502) setActionError("Jira service unavailable.");
+      else setActionError("Unable to sync Jira accountId.");
+    } finally {
+      setSyncLoadingByUserId((prev) => ({ ...prev, [userId]: false }));
+    }
+  };
+
   const handleAddMember = async () => {
-    if (!selectedUserId) return;
+    const raw = String(memberIdInput || selectedUserId || "").trim();
+    if (!raw) return;
+    const userIdNum = Number.parseInt(raw, 10);
+    if (!Number.isFinite(userIdNum) || userIdNum <= 0) {
+      setActionError("Invalid member id. Please enter a positive number.");
+      return;
+    }
     clearMessages();
     setActionLoading(true);
     try {
-      await userGroupApi.addMember(groupIdNumber, { userId: parseInt(selectedUserId, 10) });
+      await userGroupApi.addMember(groupIdNumber, { userId: userIdNum });
       setActionSuccess("Member added successfully.");
       setShowAddMemberModal(false);
       setSelectedUserId("");
+      setMemberIdInput("");
       refreshData();
     } catch (err) {
       setActionError(err?.response?.data?.message || "Unable to add member.");
@@ -168,7 +294,7 @@ export default function GroupDetails() {
     );
   }
 
-  if (!isAdmin && membershipsLoading) {
+  if (!isAdmin && role !== "LECTURER" && membershipsLoading) {
     return (
       <DashboardLayout>
         <div className="admin-dashboard">
@@ -187,7 +313,7 @@ export default function GroupDetails() {
           <div className="panel panel-center-lg">
             <h2 className="group-not-found-title">Access Denied</h2>
             <p className="group-not-found-text">You can only view groups assigned to you.</p>
-            <button className="primary-button" onClick={() => navigate("/app/groups")}>Back to My Groups</button>
+            <button className="primary-button" onClick={() => navigate(groupsHome)}>Back to My Groups</button>
           </div>
         </div>
       </DashboardLayout>
@@ -203,7 +329,7 @@ export default function GroupDetails() {
             <p className="group-not-found-text">
               Group ID: {groupId} does not exist or has been deleted.
             </p>
-            <button className="primary-button" onClick={() => navigate("/app/groups")}>
+            <button className="primary-button" onClick={() => navigate(groupsHome)}>
               Back to List
             </button>
           </div>
@@ -218,7 +344,7 @@ export default function GroupDetails() {
         {/* Header */}
         <div className="admin-header-row">
           <div>
-            <button className="back-button" onClick={() => navigate("/app/groups")}>
+            <button className="back-button" onClick={() => navigate(groupsHome)}>
               ← Back
             </button>
             <h1 className="page-title page-title-mt-8">{group.groupName}</h1>
@@ -318,8 +444,10 @@ export default function GroupDetails() {
                 <tr>
                   <th>Full Name</th>
                   <th>Email</th>
+                  <th>Jira Account ID</th>
+                  <th>GitHub Username</th>
                   <th>Role</th>
-                  {(isAdmin || role === "LECTURER") && <th>Actions</th>}
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -327,43 +455,65 @@ export default function GroupDetails() {
                   <tr key={member.userId}>
                     <td>{member.fullName}</td>
                     <td>{member.email || "-"}</td>
+                    <td>{member.jiraAccountId || "-"}</td>
+                    <td>{member.githubUsername || "-"}</td>
                     <td>
                       <span className={`status-pill ${member.role === "LEADER" ? "status-active" : "status-invited"}`}>
                         {member.role}
                       </span>
                     </td>
-                    {(isAdmin || role === "LECTURER") && (
-                      <td>
-                        <div className="flex-row-8">
-                          {member.role === "MEMBER" ? (
-                            <button
-                              className="primary-button secondary compact-button"
-                              onClick={() => handlePromote(member.userId)}
-                              disabled={actionLoading}
-                            >
-                              Promote
-                            </button>
-                          ) : (
-                            <button
-                              className="primary-button secondary compact-button"
-                              onClick={() => handleDemote(member.userId)}
-                              disabled={actionLoading}
-                            >
-                              Demote
-                            </button>
-                          )}
-                          {isAdmin && (
-                            <button
-                              className="action-button danger compact-button"
-                              onClick={() => handleRemoveMember(member.userId)}
-                              disabled={actionLoading}
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    )}
+                    <td>
+                      <div className="flex-row-8">
+                        <button
+                          className="primary-button secondary compact-button"
+                          onClick={() => openIntegrationModal(member)}
+                          disabled={actionLoading || !canEditIntegrationsForUserId(member.userId)}
+                          title={!canEditIntegrationsForUserId(member.userId) ? "You don't have permission to edit this member." : undefined}
+                        >
+                          Edit Integration
+                        </button>
+                        <button
+                          className="primary-button secondary compact-button"
+                          onClick={() => handleSyncJira(member)}
+                          disabled={actionLoading || !canEditIntegrationsForUserId(member.userId) || !!syncLoadingByUserId[Number(member.userId)]}
+                          title={!canEditIntegrationsForUserId(member.userId) ? "You don't have permission to sync this member." : undefined}
+                        >
+                          {syncLoadingByUserId[Number(member.userId)] ? "Syncing..." : "Sync Jira"}
+                        </button>
+
+                        {(isAdmin || role === "LECTURER") && (
+                          <>
+                            {member.role === "MEMBER" ? (
+                              <button
+                                className="primary-button secondary compact-button"
+                                onClick={() => handlePromote(member.userId)}
+                                disabled={actionLoading}
+                              >
+                                Promote
+                              </button>
+                            ) : (
+                              <button
+                                className="primary-button secondary compact-button"
+                                onClick={() => handleDemote(member.userId)}
+                                disabled={actionLoading}
+                              >
+                                Demote
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {isAdmin && (
+                          <button
+                            className="action-button danger compact-button"
+                            onClick={() => handleRemoveMember(member.userId)}
+                            disabled={actionLoading}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -371,6 +521,74 @@ export default function GroupDetails() {
           )}
         </div>
       </div>
+
+      {/* Integration Modal */}
+      {showIntegrationModal && (
+        <div className="modal-overlay" onClick={() => setShowIntegrationModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Edit Integration</h2>
+              <button className="modal-close" onClick={() => setShowIntegrationModal(false)}>×</button>
+            </div>
+            <form className="modal-form" onSubmit={handleSaveIntegrations}>
+              {integrationError && <div className="alert alert-error">{integrationError}</div>}
+              <div className="group-modal-note panel-mb-16">
+                Member: <strong>{integrationMember?.fullName}</strong> {integrationMember?.email ? `(${integrationMember.email})` : ""}
+              </div>
+              <label className="modal-field">
+                <span>Jira Account ID</span>
+                <input
+                  value={integrationForm.jiraAccountId}
+                  onChange={(e) => setIntegrationForm((prev) => ({ ...prev, jiraAccountId: e.target.value }))}
+                  disabled={integrationLoading}
+                  placeholder="e.g. 5b10ac8d82e05b22cc7d4ef5"
+                />
+                {integrationErrors.jiraAccountId && <span className="field-error">{integrationErrors.jiraAccountId}</span>}
+              </label>
+
+              <label className="modal-field">
+                <span>GitHub Username</span>
+                <input
+                  value={integrationForm.githubUsername}
+                  onChange={(e) => setIntegrationForm((prev) => ({ ...prev, githubUsername: e.target.value }))}
+                  disabled={integrationLoading}
+                  placeholder="e.g. octocat"
+                />
+                {integrationErrors.githubUsername && <span className="field-error">{integrationErrors.githubUsername}</span>}
+              </label>
+
+              <div className="flex-row-8 panel-mb-16">
+                <button
+                  type="button"
+                  className="primary-button secondary"
+                  onClick={handleGetJiraFromEmail}
+                  disabled={integrationLoading || integrationLookupLoading}
+                >
+                  {integrationLookupLoading ? "Looking up..." : "Get from email"}
+                </button>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="primary-button secondary"
+                  onClick={() => setShowIntegrationModal(false)}
+                  disabled={integrationLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={integrationLoading}
+                >
+                  {integrationLoading ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Member Modal */}
       {showAddMemberModal && (
@@ -382,25 +600,18 @@ export default function GroupDetails() {
             </div>
             <div className="modal-form">
               <label className="modal-field">
-                <span>Select Student</span>
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
+                <span>Member ID</span>
+                <input
+                  value={memberIdInput}
+                  onChange={(e) => setMemberIdInput(e.target.value)}
+                  placeholder="e.g. 184678"
+                  inputMode="numeric"
                   disabled={actionLoading}
-                >
-                  <option value="">-- Select student --</option>
-                  {availableStudents.map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.fullName} ({student.email})
-                    </option>
-                  ))}
-                </select>
+                />
+                <span className="field-hint">
+                  Paste/enter the student id here (recommended). The student list dropdown was removed to avoid empty data when the API disallows listing users.
+                </span>
               </label>
-              {availableStudents.length === 0 && (
-                <p className="group-modal-note">
-                  No available students to add to the group.
-                </p>
-              )}
               <div className="modal-actions">
                 <button
                   className="primary-button secondary"
@@ -412,7 +623,7 @@ export default function GroupDetails() {
                 <button
                   className="primary-button"
                   onClick={handleAddMember}
-                  disabled={actionLoading || !selectedUserId}
+                  disabled={actionLoading || !(String(memberIdInput).trim() || selectedUserId)}
                 >
                   {actionLoading ? "Adding..." : "Add Member"}
                 </button>

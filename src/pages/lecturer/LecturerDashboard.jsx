@@ -3,13 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import { useLecturerOverview, useGroupProgress, useRecentActivities } from "../../hooks/useReport";
 import { useProfile } from "../../hooks/useAuth";
-import { useSemesters, useUserGroups } from "../../hooks/useUserGroups";
+import { useGroups, useSemesters } from "../../hooks/useUserGroups";
+import { toPercentLabel, toPercentValue } from "../../utils/metrics";
 
 export default function LecturerDashboard() {
   const navigate = useNavigate();
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const { data: profile, isLoading: profileLoading } = useProfile();
+  const currentUserId = Number(profile?.id || 0);
 
   // Fetch semesters for filter
   const { data: semestersData } = useSemesters();
@@ -20,20 +22,23 @@ export default function LecturerDashboard() {
     selectedSemester ? { semesterId: Number(selectedSemester) } : undefined
   );
 
-  // Fetch own groups for the lecturer
-  const { data: membershipsData, isLoading: groupsLoading } = useUserGroups(Number(profile?.id || 0));
+  // Fetch groups supervised by this lecturer
+  const { data: groupsData, isLoading: groupsLoading } = useGroups(
+    {
+      page: 0,
+      size: 100,
+      lecturerId: currentUserId > 0 ? currentUserId : undefined,
+      semesterId: selectedSemester ? Number(selectedSemester) : undefined,
+    },
+    { enabled: currentUserId > 0 }
+  );
   const groups = useMemo(() => {
-    const memberships = membershipsData?.groups || [];
-    const semesterId = selectedSemester ? Number(selectedSemester) : undefined;
-    const filtered = semesterId
-      ? memberships.filter((group) => group.semesterId === semesterId)
-      : memberships;
-
-    return filtered.map((group) => ({
-      id: group.groupId,
+    const content = groupsData?.content || [];
+    return content.map((group) => ({
+      id: group.id,
       groupName: group.groupName,
     }));
-  }, [membershipsData, selectedSemester]);
+  }, [groupsData]);
 
   // Select first group if none selected
   const activeGroupId = selectedGroupId ?? groups[0]?.id ?? null;
@@ -63,6 +68,7 @@ export default function LecturerDashboard() {
   };
 
   const percents = getCompletionPercent();
+  const completionRatePercent = toPercentValue(progress?.completionRate) ?? 0;
 
   return (
     <DashboardLayout>
@@ -219,11 +225,11 @@ export default function LecturerDashboard() {
                       <div className="metric-bar">
                         <div
                           className="metric-bar-fill metric-commits"
-                          style={{ width: `${Math.round(progress.completionRate * 100)}%` }}
+                          style={{ width: `${Math.round(completionRatePercent)}%` }}
                         />
                       </div>
                         <span className="text-muted-sm">
-                        {Math.round(progress.completionRate * 100)}%
+                        {toPercentLabel(progress.completionRate)}
                       </span>
                     </div>
                   </div>
