@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../../layout/DashboardLayout";
-import { useUser, useUserGroups } from "../../hooks/useUserGroups";
+import { useAllGroups, useUser, useUserGroups } from "../../hooks/useUserGroups";
 import { identityAdminApi } from "../../api/identityAdminApi";
 
 export default function UserDetail() {
@@ -13,6 +13,17 @@ export default function UserDetail() {
 
   const { data: user, isLoading, error, refetch } = useUser(userIdNum);
   const { data: userGroups, isLoading: groupsLoading } = useUserGroups(userIdNum);
+  const viewedRole = String(user?.roles?.[0] || user?.role || "").toUpperCase();
+  const isLecturerUser = viewedRole === "LECTURER";
+  const { data: lecturerGroupsData, isLoading: lecturerGroupsLoading } = useAllGroups(
+    {
+      lecturerId: userIdNum,
+      size: 100,
+    },
+    {
+      enabled: isLecturerUser && Number.isFinite(userIdNum) && userIdNum > 0,
+    }
+  );
 
   // Action states
   const [actionLoading, setActionLoading] = useState(false);
@@ -148,6 +159,16 @@ export default function UserDetail() {
   }
 
   const statusClass = user.status === "ACTIVE" ? "status-active" : "status-locked";
+  const displayedGroups = isLecturerUser
+    ? (lecturerGroupsData?.content || []).map((group) => ({
+        groupId: group.id,
+        groupName: group.groupName,
+        semesterCode: group.semesterCode,
+        role: "LECTURER",
+        lecturerName: group.lecturerName,
+      }))
+    : (userGroups?.groups || []);
+  const isGroupsLoading = isLecturerUser ? lecturerGroupsLoading : groupsLoading;
 
   return (
     <DashboardLayout>
@@ -234,9 +255,9 @@ export default function UserDetail() {
           <div className="panel-header">
             <h3>Groups</h3>
           </div>
-          {groupsLoading ? (
+          {isGroupsLoading ? (
             <p className="table-empty-cell text-muted">Loading...</p>
-          ) : userGroups?.groups?.length > 0 ? (
+          ) : displayedGroups.length > 0 ? (
             <table className="data-table">
               <thead>
                 <tr>
@@ -247,7 +268,7 @@ export default function UserDetail() {
                 </tr>
               </thead>
               <tbody>
-                {userGroups.groups.map((group) => (
+                {displayedGroups.map((group) => (
                   <tr key={group.groupId}>
                     <td>{group.groupName}</td>
                     <td>{group.semesterCode}</td>
@@ -262,7 +283,9 @@ export default function UserDetail() {
               </tbody>
             </table>
           ) : (
-            <p className="table-empty-cell text-muted">No groups joined.</p>
+            <p className="table-empty-cell text-muted">
+              {isLecturerUser ? "No groups assigned to this lecturer." : "No groups joined."}
+            </p>
           )}
         </div>
 

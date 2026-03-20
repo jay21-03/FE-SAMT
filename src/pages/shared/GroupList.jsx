@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import DebouncedSearchInput from "../../components/DebouncedSearchInput";
-import { useGroups, useSemesters, useUserGroups, useUsers } from "../../hooks/useUserGroups";
+import { useAllGroups, useGroups, useSemesters, useUserGroups, useUsers } from "../../hooks/useUserGroups";
 import { useProfile } from "../../hooks/useAuth";
 import { userGroupApi } from "../../api/userGroupApi";
 import { normalizeRole } from "../../utils/access";
@@ -20,6 +20,7 @@ export default function GroupList() {
   const isStudent = role === "STUDENT";
   const isLecturer = role === "LECTURER";
   const isAdmin = role === "ADMIN";
+  const isPaged = !isStudent;
 
   // Create Group Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -40,6 +41,19 @@ export default function GroupList() {
       lecturerId: isLecturer ? currentUserId : undefined,
     },
     { enabled: isAdmin || isLecturer }
+  );
+  const keyword = search.trim().toLowerCase();
+  const isSearchMode = !isStudent && keyword.length > 0;
+
+  const { data: allGroupsData, isFetching: isSearchingGroups } = useAllGroups(
+    {
+      size: 100,
+      semesterId: semesterFilter ? parseInt(semesterFilter, 10) : undefined,
+      lecturerId: isLecturer ? currentUserId : undefined,
+    },
+    {
+      enabled: isSearchMode && (isAdmin || isLecturer),
+    }
   );
   const { data: userGroupsData, isLoading: userGroupsLoading } = useUserGroups(currentUserId);
   const { data: semesters } = useSemesters();
@@ -111,6 +125,7 @@ export default function GroupList() {
     { key: "name", header: "Group Name" },
     { key: "semester", header: "Semester" },
     { key: "lecturer", header: "Lecturer" },
+    { key: "createdAt", header: "Created At" },
     { key: "members", header: "Members" },
     {
       key: "actions",
@@ -123,9 +138,10 @@ export default function GroupList() {
     },
   ];
 
-  const rows = useMemo(() => {
-    const sourceGroups = isStudent ? (userGroupsData?.groups || []) : (data?.content || []);
-    const keyword = search.trim().toLowerCase();
+  const filteredRows = useMemo(() => {
+    const sourceGroups = isStudent
+      ? (userGroupsData?.groups || [])
+      : (isSearchMode ? (allGroupsData?.content || []) : (data?.content || []));
     const semesterId = semesterFilter ? parseInt(semesterFilter, 10) : null;
     const mapped = sourceGroups
       .map((item) => ({
@@ -134,18 +150,43 @@ export default function GroupList() {
         semester: item.semesterCode,
         semesterId: item.semesterId,
         lecturer: item.lecturerName || "-",
+        createdAt: item.createdAt
+          ? new Date(item.createdAt).toLocaleString("en-US", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })
+          : "-",
         members: item.memberCount ?? "-",
       }))
       .filter((group) => (semesterId ? group.semesterId === semesterId : true));
 
     if (!keyword) return mapped;
     return mapped.filter((group) => group.name.toLowerCase().includes(keyword));
-  }, [data, isStudent, search, semesterFilter, userGroupsData]);
+  }, [allGroupsData, data, isSearchMode, isStudent, keyword, semesterFilter, userGroupsData]);
 
-  const isLoading = isStudent ? userGroupsLoading : groupsLoading;
-  const totalPages = data?.totalPages ?? 0;
-  const totalElements = data?.totalElements ?? 0;
-  const isPaged = !isStudent;
+  const rows = useMemo(() => {
+    if (!isPaged || !isSearchMode) return filteredRows;
+    const pageSize = 50;
+    const start = page * pageSize;
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, isPaged, isSearchMode, page]);
+
+  const pageSize = 50;
+  const isLoading = isStudent
+    ? userGroupsLoading
+    : (groupsLoading || (isSearchMode && isSearchingGroups));
+  const totalElements = isPaged
+    ? (isSearchMode ? filteredRows.length : (data?.totalElements ?? 0))
+    : filteredRows.length;
+  const totalPages = isPaged
+    ? (isSearchMode ? Math.max(1, Math.ceil(totalElements / pageSize)) : (data?.totalPages ?? 0))
+    : 0;
+
+  useEffect(() => {
+    if (isPaged && page > 0 && page >= totalPages) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [isPaged, page, totalPages]);
 
   return (
     <DashboardLayout>

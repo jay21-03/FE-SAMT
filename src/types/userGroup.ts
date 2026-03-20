@@ -8,6 +8,7 @@ export interface UserResponse {
   fullName: string
   status: string
   roles: string[]
+  createdAt?: string
 }
 
 export interface UpdateUserRequest {
@@ -45,6 +46,7 @@ export interface GroupSummary {
   semesterCode: string
   lecturerName: string
   memberCount: number
+  createdAt?: string
 }
 
 export interface LecturerInfo {
@@ -116,6 +118,7 @@ export interface GroupInfo {
   semesterCode: string
   role: GroupRole
   lecturerName: string
+  createdAt?: string
 }
 
 export interface UserGroupsResponse {

@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import DebouncedSearchInput from "../../components/DebouncedSearchInput";
-import { useGroups, useSemesters } from "../../hooks/useUserGroups";
+import { useAllGroups, useGroups, useSemesters } from "../../hooks/useUserGroups";
 import { useAuditRange } from "../../hooks/useIdentityAdmin";
 import { useRestoreProjectConfig } from "../../hooks/useProjectConfigs";
 
@@ -72,14 +72,24 @@ export default function ProjectConfigList() {
     size: pageSize,
     semesterId: semesterFilter ? parseInt(semesterFilter, 10) : undefined,
   });
+  const keyword = search.trim().toLowerCase();
+  const isSearchMode = activeTab === "active" && keyword.length > 0;
+  const { data: allGroupsData, isFetching: isSearchingGroups } = useAllGroups(
+    {
+      size: 100,
+      semesterId: semesterFilter ? parseInt(semesterFilter, 10) : undefined,
+    },
+    {
+      enabled: isSearchMode,
+    }
+  );
   const { data: semesters } = useSemesters();
-  const totalPages = groupsData?.totalPages || 0;
-  const totalElements = groupsData?.totalElements || 0;
 
   const columns = [
     { key: "groupName", header: "Group" },
     { key: "semester", header: "Semester" },
     { key: "lecturer", header: "Lecturer" },
+    { key: "createdAt", header: "Created At" },
     { key: "members", header: "Members" },
     {
       key: "actions",
@@ -95,14 +105,21 @@ export default function ProjectConfigList() {
     },
   ];
 
-  const rows = useMemo(() => {
-    if (!groupsData?.content) return [];
-    const keyword = search.trim().toLowerCase();
-    const mapped = groupsData.content.map((group) => ({
+  const filteredRows = useMemo(() => {
+    const sourceGroups = isSearchMode ? (allGroupsData?.content || []) : (groupsData?.content || []);
+    if (!sourceGroups.length) return [];
+
+    const mapped = sourceGroups.map((group) => ({
       id: group.id,
       groupName: group.groupName,
       semester: group.semesterCode,
       lecturer: group.lecturerName,
+      createdAt: group.createdAt
+        ? new Date(group.createdAt).toLocaleString("en-US", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })
+        : "-",
       members: group.memberCount,
     }));
     if (!keyword) return mapped;
@@ -111,7 +128,25 @@ export default function ProjectConfigList() {
         row.groupName.toLowerCase().includes(keyword) ||
         row.lecturer.toLowerCase().includes(keyword)
     );
-  }, [groupsData, search]);
+  }, [allGroupsData, groupsData, isSearchMode, keyword]);
+
+  const rows = useMemo(() => {
+    if (!isSearchMode) return filteredRows;
+    const start = page * pageSize;
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, isSearchMode, page, pageSize]);
+
+  const totalElements = isSearchMode ? filteredRows.length : (groupsData?.totalElements || 0);
+  const totalPages = isSearchMode
+    ? Math.max(1, Math.ceil(totalElements / pageSize))
+    : Math.max(1, groupsData?.totalPages || 1);
+  const loadingRows = isLoading || (isSearchMode && isSearchingGroups);
+
+  useEffect(() => {
+    if (page > 0 && page >= totalPages) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [page, totalPages]);
 
   return (
     <DashboardLayout>
@@ -182,7 +217,7 @@ export default function ProjectConfigList() {
             <DataTable
               columns={columns}
               data={rows}
-              loading={isLoading}
+              loading={loadingRows}
               emptyMessage="No groups found."
             />
 

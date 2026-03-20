@@ -6,6 +6,7 @@ import GroupList from '../../pages/shared/GroupList'
 const {
   invalidateQueriesMock,
   useGroupsMock,
+  useAllGroupsMock,
   useUserGroupsMock,
   useSemestersMock,
   useUsersMock,
@@ -15,6 +16,7 @@ const {
 } = vi.hoisted(() => ({
   invalidateQueriesMock: vi.fn(),
   useGroupsMock: vi.fn(),
+  useAllGroupsMock: vi.fn(),
   useUserGroupsMock: vi.fn(),
   useSemestersMock: vi.fn(),
   useUsersMock: vi.fn(),
@@ -35,6 +37,7 @@ vi.mock('../../layout/DashboardLayout', () => ({
 
 vi.mock('../../hooks/useUserGroups', () => ({
   useGroups: (query) => useGroupsMock(query),
+  useAllGroups: (query, options) => useAllGroupsMock(query, options),
   useUserGroups: (userId) => useUserGroupsMock(userId),
   useSemesters: () => useSemestersMock(),
   useUsers: (query) => useUsersMock(query),
@@ -73,6 +76,7 @@ describe('GroupList page', () => {
 
     invalidateQueriesMock.mockReset()
     useGroupsMock.mockReset()
+    useAllGroupsMock.mockReset()
     useUserGroupsMock.mockReset()
     useSemestersMock.mockReset()
     useUsersMock.mockReset()
@@ -99,6 +103,21 @@ describe('GroupList page', () => {
       },
       isLoading: false,
       refetch: refetchMock,
+    })
+
+    useAllGroupsMock.mockReturnValue({
+      data: {
+        content: [
+          {
+            id: 1,
+            groupName: 'SE1705-G1',
+            semesterCode: 'SU26',
+            lecturerName: 'Dr QA',
+            memberCount: 6,
+          },
+        ],
+      },
+      isFetching: false,
     })
 
     useSemestersMock.mockReturnValue({

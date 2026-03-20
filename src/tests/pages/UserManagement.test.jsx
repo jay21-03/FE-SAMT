@@ -6,6 +6,7 @@ import UserManagement from '../../pages/admin/UserManagement'
 const {
   invalidateQueriesMock,
   useUsersMock,
+  useAllUsersMock,
   useAuditRangeMock,
   createUserMock,
   restoreUserMock,
@@ -14,6 +15,7 @@ const {
 } = vi.hoisted(() => ({
   invalidateQueriesMock: vi.fn(),
   useUsersMock: vi.fn(),
+  useAllUsersMock: vi.fn(),
   useAuditRangeMock: vi.fn(),
   createUserMock: vi.fn(),
   restoreUserMock: vi.fn(),
@@ -33,6 +35,7 @@ vi.mock('../../layout/DashboardLayout', () => ({
 
 vi.mock('../../hooks/useUserGroups', () => ({
   useUsers: (query) => useUsersMock(query),
+  useAllUsers: (query, options) => useAllUsersMock(query, options),
 }))
 
 vi.mock('../../hooks/useIdentityAdmin', () => ({
@@ -64,6 +67,7 @@ describe('UserManagement page', () => {
     invalidateQueriesMock.mockReset()
     useUsersMock.mockReset()
     useAuditRangeMock.mockReset()
+    useAllUsersMock.mockReset()
     createUserMock.mockReset()
     restoreUserMock.mockReset()
     refetchUsersMock.mockReset()
@@ -76,6 +80,14 @@ describe('UserManagement page', () => {
       },
       isLoading: false,
       refetch: refetchUsersMock,
+    })
+
+    useAllUsersMock.mockReturnValue({
+      data: {
+        content: [{ id: 1, fullName: 'QA Admin', email: 'qa@edu.vn', roles: ['ADMIN'], status: 'ACTIVE' }],
+        totalElements: 1,
+      },
+      isFetching: false,
     })
 
     useAuditRangeMock.mockReturnValue({

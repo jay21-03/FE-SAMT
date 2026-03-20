@@ -1509,7 +1509,7 @@ body {
 
 .reports-col-actions {
   width: 20%;
-  text-align: right;
+  text-align: center;
 }
 
 .reports-table td {
@@ -1638,14 +1638,22 @@ body {
 }
 
 .reports-actions-cell {
-  text-align: right;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .reports-download-btn {
   white-space: nowrap;
+  min-width: 120px;
+  justify-content: center;
 }
 
 .reports-processing-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
   font-size: 12px;
   color: #f59e0b;
   font-weight: 500;
@@ -1653,6 +1661,7 @@ body {
 
 .reports-failed-pill {
   padding: 8px 16px;
+  min-width: 120px;
   border-radius: 6px;
   border: 1px solid #fca5a5;
   background: #fef2f2;

@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../../layout/DashboardLayout";
 import DataTable from "../../components/DataTable";
 import DebouncedSearchInput from "../../components/DebouncedSearchInput";
-import { useUsers } from "../../hooks/useUserGroups";
+import { useAllUsers, useUsers } from "../../hooks/useUserGroups";
 import { useAuditRange } from "../../hooks/useIdentityAdmin";
 import { identityAdminApi } from "../../api/identityAdminApi";
 
@@ -55,6 +55,18 @@ export default function UserManagement() {
     page,
     size: pageSize,
   });
+  const keyword = search.trim().toLowerCase();
+  const isSearchMode = keyword.length > 0;
+
+  const { data: allUsersData, isFetching: isSearchingUsers } = useAllUsers(
+    {
+      status: statusFilter === "ALL" ? undefined : statusFilter,
+      size: 100,
+    },
+    {
+      enabled: activeTab === "active" && isSearchMode,
+    },
+  );
 
   // Password validation
   const passwordRules = [
@@ -183,6 +195,7 @@ export default function UserManagement() {
   const columns = [
     { key: "name", header: "Name" },
     { key: "email", header: "Email" },
+    { key: "createdAt", header: "Created At" },
     {
       key: "role",
       header: "Role",
@@ -211,13 +224,20 @@ export default function UserManagement() {
     },
   ];
 
-  const rows = useMemo(() => {
-    if (!data?.content) return [];
-    const keyword = search.trim().toLowerCase();
-    const mapped = data.content.map((user) => ({
+  const filteredRows = useMemo(() => {
+    const sourceUsers = isSearchMode ? (allUsersData?.content || []) : (data?.content || []);
+    if (!sourceUsers.length) return [];
+
+    const mapped = sourceUsers.map((user) => ({
       id: user.id,
       name: user.fullName,
       email: user.email,
+      createdAt: user.createdAt
+        ? new Date(user.createdAt).toLocaleString("en-US", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })
+        : "-",
       role: user.roles?.[0] ?? "UNKNOWN",
       status: user.status ?? "UNKNOWN",
     }));
@@ -225,11 +245,28 @@ export default function UserManagement() {
     return mapped.filter((user) =>
       user.name.toLowerCase().includes(keyword) || user.email.toLowerCase().includes(keyword),
     );
-  }, [data, search]);
+  }, [allUsersData, data, isSearchMode, keyword]);
 
-  const totalPages = Math.max(1, data?.totalPages || 1);
+  const rows = useMemo(() => {
+    if (!isSearchMode) return filteredRows;
+    const start = page * pageSize;
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, isSearchMode, page, pageSize]);
+
+  const totalElements = isSearchMode ? filteredRows.length : (data?.totalElements || 0);
+  const totalPages = isSearchMode
+    ? Math.max(1, Math.ceil(totalElements / pageSize))
+    : Math.max(1, data?.totalPages || 1);
+  const loadingRows = isLoading || (isSearchMode && isSearchingUsers);
+
   const canGoPrev = page > 0;
   const canGoNext = page + 1 < totalPages;
+
+  useEffect(() => {
+    if (page > 0 && page >= totalPages) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [page, totalPages]);
 
   const goToPage = (rawValue) => {
     const parsed = parseInt(rawValue, 10);
@@ -300,7 +337,7 @@ export default function UserManagement() {
             <DataTable
               columns={columns}
               data={rows}
-              loading={isLoading}
+              loading={loadingRows}
               emptyMessage="No users found."
             />
 
@@ -315,13 +352,13 @@ export default function UserManagement() {
               }}
             >
               <div style={{ color: "#6b7280", fontSize: 14 }}>
-                Page {Math.min(page + 1, totalPages)} / {totalPages}
+                Page {Math.min(page + 1, totalPages)} / {totalPages} ({totalElements} users)
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                 <button
                   className="primary-button secondary"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={!canGoPrev || isLoading}
+                  disabled={!canGoPrev || loadingRows}
                 >
                   Previous
                 </button>
@@ -333,7 +370,7 @@ export default function UserManagement() {
                   max={totalPages}
                   value={Math.min(page + 1, totalPages)}
                   onChange={(e) => goToPage(e.target.value)}
-                  disabled={isLoading}
+                  disabled={loadingRows}
                   style={{ width: 80 }}
                   className="select-input"
                 />
@@ -341,7 +378,7 @@ export default function UserManagement() {
                 <button
                   className="primary-button secondary"
                   onClick={() => setPage((p) => p + 1)}
-                  disabled={!canGoNext || isLoading}
+                  disabled={!canGoNext || loadingRows}
                 >
                   Next
                 </button>

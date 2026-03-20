@@ -30,6 +30,49 @@ export const useUsers = (
     retry: options?.retry === false ? false : retryUnlessForbidden,
   })
 
+export const useAllUsers = (
+  query?: Omit<UserListQuery, "page">,
+  options?: { enabled?: boolean; retry?: boolean }
+) =>
+  useQuery({
+    queryKey: ["users", "all", query],
+    queryFn: async () => {
+      const pageSize = query?.size ?? 100
+      const first = await userGroupApi.listUsers({ ...(query ?? {}), page: 0, size: pageSize })
+      const totalPages = Math.max(1, first?.totalPages ?? 1)
+
+      if (totalPages === 1) {
+        return {
+          ...first,
+          page: 0,
+          totalPages: 1,
+          totalElements: first?.totalElements ?? first?.content?.length ?? 0,
+        }
+      }
+
+      const rest = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, index) =>
+          userGroupApi.listUsers({ ...(query ?? {}), page: index + 1, size: pageSize })
+        )
+      )
+
+      const mergedContent = [
+        ...(first?.content ?? []),
+        ...rest.flatMap((result) => result?.content ?? []),
+      ]
+
+      return {
+        ...first,
+        content: mergedContent,
+        page: 0,
+        totalPages: 1,
+        totalElements: mergedContent.length,
+      }
+    },
+    enabled: options?.enabled ?? true,
+    retry: options?.retry === false ? false : retryUnlessForbidden,
+  })
+
 export const useUser = (userId: number) =>
   useQuery({
     queryKey: queryKeys.user(userId),
@@ -48,6 +91,49 @@ export const useGroups = (query?: GroupListQuery, options?: { enabled?: boolean 
   useQuery({
     queryKey: queryKeys.groups(query),
     queryFn: () => userGroupApi.listGroups(query),
+    enabled: options?.enabled ?? true,
+    staleTime: 60_000,
+  })
+
+export const useAllGroups = (
+  query?: Omit<GroupListQuery, "page">,
+  options?: { enabled?: boolean }
+) =>
+  useQuery({
+    queryKey: ["groups", "all", query],
+    queryFn: async () => {
+      const pageSize = query?.size ?? 100
+      const first = await userGroupApi.listGroups({ ...(query ?? {}), page: 0, size: pageSize })
+      const totalPages = Math.max(1, first?.totalPages ?? 1)
+
+      if (totalPages === 1) {
+        return {
+          ...first,
+          page: 0,
+          totalPages: 1,
+          totalElements: first?.totalElements ?? first?.content?.length ?? 0,
+        }
+      }
+
+      const rest = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, index) =>
+          userGroupApi.listGroups({ ...(query ?? {}), page: index + 1, size: pageSize })
+        )
+      )
+
+      const mergedContent = [
+        ...(first?.content ?? []),
+        ...rest.flatMap((result) => result?.content ?? []),
+      ]
+
+      return {
+        ...first,
+        content: mergedContent,
+        page: 0,
+        totalPages: 1,
+        totalElements: mergedContent.length,
+      }
+    },
     enabled: options?.enabled ?? true,
     staleTime: 60_000,
   })
