@@ -6,6 +6,7 @@ import { isStudentLeader } from "../utils/access";
 const TAB_ITEMS = [
   { key: "team-board", label: "Team Board", to: "/app/student/team-board" },
   { key: "my-work", label: "My Work", to: "/app/student/my-work" },
+  { key: "project-config", label: "Project Config", to: "/app/student/project-config" },
   { key: "my-stats", label: "My Stats", to: "/app/student/stats" },
 ];
 

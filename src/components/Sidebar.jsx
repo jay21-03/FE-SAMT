@@ -92,6 +92,9 @@ export default function Sidebar() {
             <Link className="sidebar-link" to="/app/groups">
               <span>My Groups</span>
             </Link>
+            <Link className="sidebar-link" to="/app/student/project-config">
+              <span>Project Config</span>
+            </Link>
             {showStudentReports && (
               <Link className="sidebar-link" to="/app/reports">
                 <span>Reports (SRS)</span>

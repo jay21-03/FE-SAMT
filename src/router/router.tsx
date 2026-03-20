@@ -14,6 +14,7 @@ import LecturerTasks from "../pages/lecturer/LecturerTasks";
 import LecturerGithubStats from "../pages/lecturer/LecturerGithubStats";
 import StudentDashboard from "../pages/student/StudentDashboard";
 import StudentTeamBoard from "../pages/student/StudentTeamBoard";
+import StudentProjectConfigQuick from "../pages/student/StudentProjectConfigQuick";
 import StudentStats from "../pages/student/StudentStats";
 import StudentPermissions from "../pages/student/StudentPermissions";
 import UserProfile from "../pages/shared/UserProfile";
@@ -99,6 +100,15 @@ export default function AppRouter() {
         element={
           <ProtectedRoute allowedRoles={["STUDENT"]}>
             <StudentStats />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/app/student/project-config"
+        element={
+          <ProtectedRoute allowedRoles={["STUDENT"]}>
+            <StudentProjectConfigQuick />
           </ProtectedRoute>
         }
       />

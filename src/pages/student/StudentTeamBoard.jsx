@@ -188,7 +188,15 @@ export default function StudentTeamBoard() {
               </button>
             </div>
 
-            <table className="data-table">
+            <table className="data-table student-team-table">
+              <colgroup>
+                <col className="student-col-task" />
+                <col className="student-col-source" />
+                <col className="student-col-status" />
+                <col className="student-col-assignee" />
+                <col className="student-col-priority" />
+                <col className="student-col-updated" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Task</th>
@@ -215,7 +223,7 @@ export default function StudentTeamBoard() {
                 ) : (
                   tasks.map((task) => (
                     <tr key={task.taskId}>
-                      <td>
+                      <td className="student-task-cell">
                         <a
                           href={task.url}
                           target="_blank"
@@ -226,17 +234,17 @@ export default function StudentTeamBoard() {
                         </a>
                         <div className="student-task-title">{task.title}</div>
                       </td>
-                      <td>
+                      <td className="student-source-cell">
                         <span className={`student-source-badge ${task.source === "JIRA" ? "jira" : "github"}`}>
                           {task.source}
                         </span>
                       </td>
-                      <td>
-                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <td className="student-status-cell">
+                        <div className="student-status-wrap">
                           <span className="status-pill">{getStatusLabel(task.status)}</span>
                           {canUpdateStatus(task) && (
                             <select
-                              className="reports-select"
+                              className="reports-select student-status-select"
                               aria-label={`Update status ${task.key}`}
                               value={String(task.status || "").toUpperCase()}
                               disabled={statusUpdatingId === task.taskId || updateLeaderStatus.isPending}
@@ -251,9 +259,9 @@ export default function StudentTeamBoard() {
                           )}
                         </div>
                       </td>
-                      <td>
+                      <td className="student-assignee-cell">
                         <select
-                          className="reports-select"
+                          className="reports-select student-assignee-select"
                           aria-label={`Assign ${task.key}`}
                           value={resolveAssigneeUserId(task)}
                           disabled={assigningId === task.taskId || assignTask.isPending}
