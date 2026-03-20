@@ -1495,24 +1495,24 @@ body {
   border-bottom: 1px solid #e2e8f0;
 }
 
-.reports-col-report {
+.reports-table th.reports-col-report {
   width: 45%;
-  text-align: center;
+  text-align: center !important;
 }
 
-.reports-col-status {
+.reports-table th.reports-col-status {
   width: 15%;
-  text-align: center;
+  text-align: center !important;
 }
 
-.reports-col-created {
+.reports-table th.reports-col-created {
   width: 20%;
-  text-align: center;
+  text-align: center !important;
 }
 
-.reports-col-actions {
+.reports-table th.reports-col-actions {
   width: 20%;
-  text-align: center;
+  text-align: center !important;
 }
 
 .reports-table td {
@@ -1641,24 +1641,24 @@ body {
   margin-top: 2px;
 }
 
-.reports-actions-cell {
-  text-align: center;
+.reports-table td.reports-actions-cell {
+  text-align: center !important;
 }
 
 .reports-download-btn {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
   white-space: nowrap;
   min-width: 120px;
   justify-content: center;
-  margin: 0 auto;
+  margin: 0 auto !important;
 }
 
 .reports-report-cell,
 .reports-status-cell,
 .reports-created-cell,
 .reports-actions-cell {
-  text-align: center;
+  text-align: center !important;
 }
 
 .reports-table td.reports-actions-cell {
@@ -1668,8 +1668,8 @@ body {
 .reports-table td.reports-actions-cell .reports-download-btn,
 .reports-table td.reports-actions-cell .reports-failed-pill,
 .reports-table td.reports-actions-cell .reports-processing-label {
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 .reports-processing-label {
@@ -2759,19 +2759,19 @@ body {
   vertical-align: middle;
 }
 
-.student-head-task,
-.student-head-source,
-.student-head-status,
-.student-head-assignee,
-.student-head-priority,
-.student-head-updated,
-.student-col-task-align,
-.student-col-source-align,
-.student-col-status-align,
-.student-col-assignee-align,
-.student-col-priority-align,
-.student-col-updated-align {
-  text-align: center;
+.student-team-table th.student-head-task,
+.student-team-table th.student-head-source,
+.student-team-table th.student-head-status,
+.student-team-table th.student-head-assignee,
+.student-team-table th.student-head-priority,
+.student-team-table th.student-head-updated,
+.student-team-table td.student-col-task-align,
+.student-team-table td.student-col-source-align,
+.student-team-table td.student-col-status-align,
+.student-team-table td.student-col-assignee-align,
+.student-team-table td.student-col-priority-align,
+.student-team-table td.student-col-updated-align {
+  text-align: center !important;
 }
 
 .student-col-task {
