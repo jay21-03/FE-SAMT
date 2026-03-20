@@ -1497,14 +1497,17 @@ body {
 
 .reports-col-report {
   width: 45%;
+  text-align: center;
 }
 
 .reports-col-status {
   width: 15%;
+  text-align: center;
 }
 
 .reports-col-created {
   width: 20%;
+  text-align: center;
 }
 
 .reports-col-actions {
@@ -1528,6 +1531,7 @@ body {
 .reports-row-main {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
 }
 
@@ -1647,6 +1651,25 @@ body {
   white-space: nowrap;
   min-width: 120px;
   justify-content: center;
+  margin: 0 auto;
+}
+
+.reports-report-cell,
+.reports-status-cell,
+.reports-created-cell,
+.reports-actions-cell {
+  text-align: center;
+}
+
+.reports-table td.reports-actions-cell {
+  text-align: center !important;
+}
+
+.reports-table td.reports-actions-cell .reports-download-btn,
+.reports-table td.reports-actions-cell .reports-failed-pill,
+.reports-table td.reports-actions-cell .reports-processing-label {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .reports-processing-label {
@@ -2736,6 +2759,21 @@ body {
   vertical-align: middle;
 }
 
+.student-head-task,
+.student-head-source,
+.student-head-status,
+.student-head-assignee,
+.student-head-priority,
+.student-head-updated,
+.student-col-task-align,
+.student-col-source-align,
+.student-col-status-align,
+.student-col-assignee-align,
+.student-col-priority-align,
+.student-col-updated-align {
+  text-align: center;
+}
+
 .student-col-task {
   width: 34%;
 }
@@ -2790,6 +2828,7 @@ body {
 .student-status-wrap {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   min-height: 36px;
 }
