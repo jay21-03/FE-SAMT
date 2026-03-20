@@ -375,7 +375,7 @@ export default function Reports() {
                 {reports.map((report) => {
                   return (
                     <tr key={report.reportId}>
-                      <td>
+                      <td className="reports-report-cell">
                         <div className="reports-row-main">
                           <div className="reports-file-icon">
                             {getFileIcon(report.fileName)}
@@ -395,7 +395,7 @@ export default function Reports() {
                           </div>
                         </div>
                       </td>
-                      <td>
+                      <td className="reports-status-cell">
                         <span className={`reports-status-badge reports-status-${report.status?.toLowerCase()}`}>
                           <span className={report.status === "PROCESSING" ? "reports-spin" : ""}>
                             {getStatusIcon(report.status)}
@@ -403,7 +403,7 @@ export default function Reports() {
                           {report.status}
                         </span>
                       </td>
-                      <td>
+                      <td className="reports-created-cell">
                         <div className="reports-created-main">
                           {formatDate(report.createdAt)}
                         </div>

@@ -199,12 +199,12 @@ export default function StudentTeamBoard() {
               </colgroup>
               <thead>
                 <tr>
-                  <th>Task</th>
-                  <th>Source</th>
-                  <th>Status</th>
-                  <th>Assignee</th>
-                  <th>Priority</th>
-                  <th>Updated</th>
+                  <th className="student-head-task">Task</th>
+                  <th className="student-head-source">Source</th>
+                  <th className="student-head-status">Status</th>
+                  <th className="student-head-assignee">Assignee</th>
+                  <th className="student-head-priority">Priority</th>
+                  <th className="student-head-updated">Updated</th>
                 </tr>
               </thead>
               <tbody>
@@ -223,7 +223,7 @@ export default function StudentTeamBoard() {
                 ) : (
                   tasks.map((task) => (
                     <tr key={task.taskId}>
-                      <td className="student-task-cell">
+                      <td className="student-task-cell student-col-task-align">
                         <a
                           href={task.url}
                           target="_blank"
@@ -234,12 +234,12 @@ export default function StudentTeamBoard() {
                         </a>
                         <div className="student-task-title">{task.title}</div>
                       </td>
-                      <td className="student-source-cell">
+                      <td className="student-source-cell student-col-source-align">
                         <span className={`student-source-badge ${task.source === "JIRA" ? "jira" : "github"}`}>
                           {task.source}
                         </span>
                       </td>
-                      <td className="student-status-cell">
+                      <td className="student-status-cell student-col-status-align">
                         <div className="student-status-wrap">
                           {canUpdateStatus(task) ? (
                             <select
@@ -260,7 +260,7 @@ export default function StudentTeamBoard() {
                           )}
                         </div>
                       </td>
-                      <td className="student-assignee-cell">
+                      <td className="student-assignee-cell student-col-assignee-align">
                         <select
                           className="reports-select student-assignee-select"
                           aria-label={`Assign ${task.key}`}
@@ -276,8 +276,8 @@ export default function StudentTeamBoard() {
                           ))}
                         </select>
                       </td>
-                      <td className="student-cell-sm">{task.priority || "-"}</td>
-                      <td className="text-muted-sm">
+                      <td className="student-cell-sm student-col-priority-align">{task.priority || "-"}</td>
+                      <td className="text-muted-sm student-col-updated-align">
                         {task.updatedAt ? new Date(task.updatedAt).toLocaleDateString("en-US") : "-"}
                       </td>
                     </tr>
