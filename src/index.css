@@ -1638,12 +1638,12 @@ body {
 }
 
 .reports-actions-cell {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  text-align: center;
 }
 
 .reports-download-btn {
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;
   min-width: 120px;
   justify-content: center;
@@ -2731,6 +2731,11 @@ body {
   table-layout: fixed;
 }
 
+.student-team-table th,
+.student-team-table td {
+  vertical-align: middle;
+}
+
 .student-col-task {
   width: 34%;
 }
@@ -2785,17 +2790,25 @@ body {
 .student-status-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-height: 36px;
 }
 
 .student-status-select {
-  min-width: 130px;
+  width: 100%;
+  min-width: 0;
 }
 
 .student-assignee-select {
   width: 100%;
-  min-width: 150px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.student-team-table .reports-select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .student-source-badge {

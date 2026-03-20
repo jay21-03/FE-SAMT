@@ -241,8 +241,7 @@ export default function StudentTeamBoard() {
                       </td>
                       <td className="student-status-cell">
                         <div className="student-status-wrap">
-                          <span className="status-pill">{getStatusLabel(task.status)}</span>
-                          {canUpdateStatus(task) && (
+                          {canUpdateStatus(task) ? (
                             <select
                               className="reports-select student-status-select"
                               aria-label={`Update status ${task.key}`}
@@ -256,6 +255,8 @@ export default function StudentTeamBoard() {
                                 </option>
                               ))}
                             </select>
+                          ) : (
+                            <span className="status-pill">{getStatusLabel(task.status)}</span>
                           )}
                         </div>
                       </td>
