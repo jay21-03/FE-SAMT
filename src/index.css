@@ -842,7 +842,7 @@ body {
 .data-table th,
 .data-table td {
   padding: 8px 6px;
-  text-align: left;
+  text-align: center;
 }
 
 .data-table thead tr {
@@ -1486,7 +1486,7 @@ body {
 
 .reports-table th {
   padding: 14px 20px;
-  text-align: left;
+  text-align: center;
   font-size: 12px;
   font-weight: 600;
   color: #475569;
@@ -1517,6 +1517,7 @@ body {
 
 .reports-table td {
   padding: 16px 20px;
+  text-align: center;
   border-bottom: 1px solid #f1f5f9;
 }
 
